@@ -19,6 +19,7 @@ int main(void)
 {
 	struct mcc_vector *v1;
 	struct mcc_vector *v2;
+	struct mcc_vector *v3;
 	struct mcc_vector_iter iter;
 
 	v1 = mcc_vector_new(MCC_BASICS(int));
@@ -52,7 +53,35 @@ int main(void)
 	for (struct fruit f; iter.next(&iter, &f);)
 		printf("name: %s, color: %d\n", f.name, f.color);
 
+	v3 = mcc_vector_new(MCC_VECTOR);
+
+	for (size_t i = 0; i < 5; i++) {
+		struct mcc_vector *tmp;
+		tmp = mcc_vector_new(MCC_BASICS(int));
+		mcc_vector_push(v3, &tmp);
+	}
+
+	mcc_vector_iter_init(v3, &iter);
+	for (struct mcc_vector *tmp; iter.next(&iter, &tmp);) {
+		mcc_vector_push(tmp, &(int){0});
+		mcc_vector_push(tmp, &(int){1});
+		mcc_vector_push(tmp, &(int){2});
+		mcc_vector_push(tmp, &(int){3});
+	}
+
+	mcc_vector_iter_init(v3, &iter);
+	for (struct mcc_vector *tmp; iter.next(&iter, &tmp);) {
+		size_t len = mcc_vector_len(tmp);
+		for (size_t i = 0; i < len; i++) {
+			int t;
+			mcc_vector_get(tmp, i, &t);
+			printf("%d ", t);
+		}
+		putchar('\n');
+	}
+
 	mcc_vector_delete(v1);
 	mcc_vector_delete(v2);
+	mcc_vector_delete(v3);
 	return 0;
 }

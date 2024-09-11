@@ -8,6 +8,16 @@ struct mcc_heap {
 	mcc_compare_f cmp;
 };
 
+static void mcc_heap_dtor(void *self)
+{
+	mcc_heap_delete(*(struct mcc_heap **)self);
+}
+
+const struct mcc_object_interface mcc_heap_object_interface = {
+	.size = sizeof(struct mcc_heap *),
+	.dtor = mcc_heap_dtor,
+};
+
 static void sift_down(struct mcc_heap *self, size_t i)
 {
 	size_t large, left, right;
@@ -41,7 +51,7 @@ static void sift_down(struct mcc_heap *self, size_t i)
 	}
 }
 
-struct mcc_heap *mcc_heap_new(struct mcc_object_interface *element,
+struct mcc_heap *mcc_heap_new(const struct mcc_object_interface *element,
 			      mcc_compare_f cmp)
 {
 	struct mcc_heap *self;

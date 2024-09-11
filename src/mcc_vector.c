@@ -9,6 +9,16 @@ struct mcc_vector {
 	struct mcc_object_interface elem;
 };
 
+static void mcc_vector_dtor(void *self)
+{
+	mcc_vector_delete(*(struct mcc_vector **)self);
+}
+
+const struct mcc_object_interface mcc_vector_object_interface = {
+	.size = sizeof(struct mcc_vector *),
+	.dtor = mcc_vector_dtor,
+};
+
 static inline void *get_ptr(struct mcc_vector *self, size_t index)
 {
 	return self->ptr + index * self->elem.size;
@@ -82,7 +92,7 @@ int mcc_vector_shrink_to_fit(struct mcc_vector *self)
 
 	if (!self->len) {
 		free(self->ptr);
-		self->ptr =NULL;
+		self->ptr = NULL;
 		self->cap = 0;
 		return OK;
 	}

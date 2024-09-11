@@ -55,4 +55,8 @@ int mcc_vector_sort(struct mcc_vector *self, mcc_compare_f cmp);
 
 int mcc_vector_iter_init(struct mcc_vector *self, struct mcc_vector_iter *iter);
 
+extern const struct mcc_object_interface mcc_vector_object_interface;
+
+#define MCC_VECTOR (&mcc_vector_object_interface)
+
 #endif /* _MCC_VECTOR_H */
