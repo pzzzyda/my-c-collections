@@ -7,7 +7,7 @@ struct mcc_vector;
 
 struct mcc_vector_iter {
 	size_t idx;
-	struct mcc_vector *vec;
+	struct mcc_vector *container;
 	bool (*next)(struct mcc_vector_iter *self, void *value);
 };
 
