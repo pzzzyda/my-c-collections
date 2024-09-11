@@ -240,6 +240,9 @@ int mcc_vector_swap(struct mcc_vector *self, size_t a, size_t b)
 	if (a >= self->len || b > self->len)
 		return OUT_OF_RANGE;
 
+	if (a == b)
+		return OK;
+
 	mcc_memswap(get_ptr(self, a), get_ptr(self, b), self->elem.size);
 	return OK;
 }
