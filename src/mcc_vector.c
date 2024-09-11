@@ -73,6 +73,29 @@ int mcc_vector_reserve(struct mcc_vector *self, size_t additional)
 	return OK;
 }
 
+int mcc_vector_shrink_to_fit(struct mcc_vector *self)
+{
+	uint8_t *tmp;
+
+	if (!self)
+		return INVALID_ARGUMENTS;
+
+	if (!self->len) {
+		free(self->ptr);
+		self->ptr =NULL;
+		self->cap = 0;
+		return OK;
+	}
+
+	tmp = realloc(self->ptr, self->len * self->elem.size);
+	if (!tmp)
+		return CANNOT_ALLOCATE_MEMORY;
+
+	self->ptr = tmp;
+	self->cap = self->len;
+	return OK;
+}
+
 int mcc_vector_push(struct mcc_vector *self, const void *value)
 {
 	if (!self || !value)

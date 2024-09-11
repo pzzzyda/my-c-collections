@@ -17,6 +17,8 @@ void mcc_vector_delete(struct mcc_vector *self);
 
 int mcc_vector_reserve(struct mcc_vector *self, size_t additional);
 
+int mcc_vector_shrink_to_fit(struct mcc_vector *self);
+
 int mcc_vector_push(struct mcc_vector *self, const void *value);
 
 void mcc_vector_pop(struct mcc_vector *self);
