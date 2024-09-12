@@ -7,4 +7,8 @@
 
 typedef int (*mcc_compare_f)(const void *a, const void *b);
 
+typedef size_t (*mcc_hash_f)(const void *key);
+
+typedef bool (*mcc_equal_f)(const void *a, const void *b);
+
 #endif /* _MCC_TYPE_H */
