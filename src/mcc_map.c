@@ -1,0 +1,638 @@
+#include "mcc_map.h"
+#include "mcc_err.h"
+#include "mcc_utils.h"
+
+#define MCC_RB_RED 0
+#define MCC_RB_BLACK 1
+
+struct mcc_rb_node {
+	int color;
+	struct mcc_rb_node *parent;
+	struct mcc_rb_node *left;
+	struct mcc_rb_node *right;
+	void *k;
+	void *v;
+};
+
+struct mcc_map {
+	struct mcc_rb_node *root;
+	size_t len;
+	struct mcc_object_interface k;
+	struct mcc_object_interface v;
+	mcc_compare_f cmp;
+};
+
+static void mcc_map_dtor(void *self)
+{
+	mcc_map_delete(*(struct mcc_map **)self);
+}
+
+const struct mcc_object_interface mcc_map_object_interface = {
+	.size = sizeof(struct mcc_map *),
+	.dtor = mcc_map_dtor,
+};
+
+static inline bool rb_is_red(struct mcc_rb_node *node)
+{
+	return !node ? false : node->color == MCC_RB_RED;
+}
+
+static inline bool rb_is_black(struct mcc_rb_node *node)
+{
+	return !node ? true : node->color == MCC_RB_BLACK;
+}
+
+static inline bool rb_is_root(struct mcc_rb_node *node)
+{
+	return !node ? false : node->parent == NULL;
+}
+
+static void rb_left_rotate(struct mcc_rb_node **root, struct mcc_rb_node *x)
+{
+	if (!root || !*root || !x)
+		return;
+	/*
+	 *  X->parent       X->parent
+	 *    |                 |
+	 *    X                 Y
+	 *   / \      -->      / \
+	 *  ?   Y             X   ?
+	 *     / \           / \
+	 *    Yl  ?         ?  Yl
+	 */
+	struct mcc_rb_node *y = x->right;
+	if (y) {
+		x->right = y->left;
+		if (y->left)
+			y->left->parent = x;
+		y->parent = x->parent;
+		if (!x->parent)
+			*root = y;
+		else if (x == x->parent->left)
+			x->parent->left = y;
+		else
+			x->parent->right = y;
+		y->left = x;
+		x->parent = y;
+	}
+}
+
+static void rb_right_rotate(struct mcc_rb_node **root, struct mcc_rb_node *x)
+{
+	if (!root || !*root || !x)
+		return;
+	/*
+	 *    X->parent       X->parent
+	 *      |                 |
+	 *      X                 Y
+	 *     / \      -->      / \
+	 *    Y   ?             ?   X
+	 *   / \                   / \
+	 *  ?  Yr                 Yr  ?
+	 */
+	struct mcc_rb_node *y = x->left;
+	if (y) {
+		x->left = y->right;
+		if (y->right)
+			y->right->parent = x;
+		y->parent = x->parent;
+		if (!x->parent)
+			*root = y;
+		else if (x == x->parent->left)
+			x->parent->left = y;
+		else
+			x->parent->right = y;
+		y->right = x;
+		x->parent = y;
+	}
+}
+
+static void rb_fix_insert(struct mcc_rb_node **root, struct mcc_rb_node *node)
+{
+	struct mcc_rb_node *parent, *grandparent, *tmp;
+
+	if (!root || !*root || !node)
+		return;
+
+	while (true) {
+		/*
+		 * If the insertion node is the root node, simply change the
+		 * color of the insertion node to black and then end the loop.
+		 */
+		if (rb_is_root(node)) {
+			node->color = MCC_RB_BLACK;
+			break;
+		}
+
+		parent = node->parent;
+
+		/*
+		 * If the parent node of the insertion node is black, end the
+		 * loop directly.
+		 */
+		if (rb_is_black(parent))
+			break;
+
+		grandparent = parent->parent;
+		tmp = grandparent->left;
+		if (parent != tmp) { /* parent == grandparent->right */
+			if (rb_is_red(tmp)) {
+				/*
+				 * Case 1: If the uncle node is red, the parent
+				 * and uncle nodes change color, the grandfather
+				 * node becomes the new insertion node, and then
+				 * continue.
+				 *
+				 *    g(B)            g(R) <- i
+				 *    /  \            /  \
+				 *  u(R)  p(R)  -->  u(B) p(B)
+				 *         \               \
+				 *          i(R)           (R)
+				 */
+				parent->color = MCC_RB_BLACK;
+				tmp->color = MCC_RB_BLACK;
+				grandparent->color = MCC_RB_RED;
+				node = grandparent;
+				continue;
+			}
+
+			tmp = parent->right;
+			if (node != tmp) { /* node == parent->left */
+				/*
+				 * Case 2: The uncle node is black and the
+				 * inserted node is the left child of the parent
+				 * node.
+				 *
+				 *     g(B)             g(B)
+				 *     /  \             /  \
+				 *    u(B) p(R)  -->   u(B) i(R)
+				 *   /                  \
+				 *  i(R)                 p(R)
+				 *
+				 * Rotate right at the parent node. But it
+				 * hasn't been fixed yet, and it will eventually
+				 * be fixed in Case 3.
+				 */
+				rb_right_rotate(root, parent);
+			}
+
+			/*
+			 * Case 3: The uncle node is black and the inserted node
+			 * is the right child of the parent node.
+			 *
+			 *   g(B)             p(B)
+			 *   /  \             /  \
+			 *  u(B) p(R)  -->   g(R) i(R)
+			 *        \         /
+			 *         i(R)    u(B)
+			 */
+			grandparent->right->color = MCC_RB_BLACK;
+			grandparent->color = MCC_RB_RED;
+			rb_left_rotate(root, grandparent);
+			break;
+		} else { /* parent == grandparent->left */
+			tmp = grandparent->right;
+			if (rb_is_red(tmp)) {
+				/* Case 1: The color of uncle node is red. */
+				parent->color = MCC_RB_BLACK;
+				tmp->color = MCC_RB_BLACK;
+				grandparent->color = MCC_RB_RED;
+				node = grandparent;
+				continue;
+			}
+			tmp = parent->left;
+			if (node != tmp) { /* node == parent->right */
+				/*
+				 * Case 2: The uncle node is black and the
+				 * inserted node is the right child of the
+				 * parent node.
+				 */
+				rb_left_rotate(root, parent);
+			}
+			/*
+			 * Case 3: The uncle node is black and the inserted node
+			 * is the left child of the parent node.
+			 */
+			grandparent->left->color = MCC_RB_BLACK;
+			grandparent->color = MCC_RB_RED;
+			rb_right_rotate(root, grandparent);
+			break;
+		}
+	}
+}
+
+static void rb_fix_remove(struct mcc_rb_node **root, struct mcc_rb_node *parent)
+{
+	struct mcc_rb_node *db = NULL, *sibling;
+
+	if (!root || !*root || !parent)
+		return;
+
+	while (true) {
+		/*
+		 * If the double black node is the root node, the loop ends
+		 * directly.
+		 */
+		if (rb_is_root(db))
+			break;
+
+		/*
+		 * If the color of the double black node is red, the loop ends
+		 * directly.
+		 */
+		if (rb_is_red(db)) {
+			db->color = MCC_RB_BLACK;
+			break;
+		}
+
+		sibling = parent->left;
+		if (db != sibling) { /* db == parent->right */
+			if (rb_is_red(sibling)) {
+				/*
+				 * Case 1: The double black node is the right
+				 * node, and the color of the sibling node is
+				 * red.
+				 *
+				 *      p(B)            s(B)
+				 *      /  \            /  \
+				 *    s(R) db   -->   l(B) p(R)
+				 *    /  \                 /  \
+				 *   l(B) r(B)            r(B) db
+				 *
+				 * Rotate right at the parent node and
+				 * continue.
+				 */
+				parent->color = MCC_RB_RED;
+				sibling->color = MCC_RB_BLACK;
+				rb_right_rotate(root, parent);
+				continue;
+			}
+
+			/*
+			 * Case 2: The sibling node is black and its left and
+			 * right child are both black.
+			 *
+			 *       p              p <-db
+			 *      / \    -->     / \
+			 *    s(B) db        s(R) #
+			 *    /  \           /  \
+			 *  (B)  (B)       (B)  (B)
+			 *
+			 * Change the color of the sibling node to red, then the
+			 * parent node becomes the new double black node, and
+			 * continue.
+			 */
+			if (rb_is_black(sibling->left) &&
+			    rb_is_black(sibling->right)) {
+				sibling->color = MCC_RB_RED;
+				db = parent;
+				parent = db->parent;
+				continue;
+			}
+
+			/*
+			 * Here, we've fixed the double black after making the
+			 * corresponding rotation operation.
+			 */
+			if (rb_is_red(sibling->left)) {
+				/*
+				 * Case 3: The sibling node is black and its
+				 * left child is red.
+				 *
+				 *     p(?)             s(?)
+				 *     /  \             /  \
+				 *   s(B)  db   -->    r(B) p(B)
+				 *   /                       \
+				 * r(R)                       # -> db(X)
+				 *
+				 * It doesn't matter if the right child of the
+				 * sibling node is red or not.
+				 */
+				sibling->left->color = sibling->color;
+				sibling->color = parent->color;
+				parent->color = MCC_RB_BLACK;
+				rb_right_rotate(root, parent);
+			} else {
+				/*
+				 * Case 4: The sibling node is black and its
+				 * right child is red.
+				 *
+				 *     p(?)             r(?)
+				 *     /  \             /  \
+				 *    s(B) db   -->    s(B) p(B)
+				 *     \                     \
+				 *      r(R)                  # -> db(X)
+				 */
+				sibling->right->color = parent->color;
+				parent->color = MCC_RB_BLACK;
+				rb_left_rotate(root, sibling);
+				rb_right_rotate(root, parent);
+			}
+			break;
+		} else { /* db == parent->left */
+			sibling = parent->right;
+			if (rb_is_red(sibling)) {
+				/* Case 1: The sibling node is red. */
+				parent->color = MCC_RB_RED;
+				sibling->color = MCC_RB_BLACK;
+				rb_left_rotate(root, parent);
+				continue;
+			}
+			/*
+			 * Case 2: The sibling node is black and its left and
+			 * right child are both black.
+			 */
+			if (rb_is_black(sibling->left) &&
+			    rb_is_black(sibling->right)) {
+				sibling->color = MCC_RB_RED;
+				db = parent;
+				parent = db->parent;
+				continue;
+			}
+			if (rb_is_red(sibling->right)) {
+				/*
+				 * Case 3: The sibling node is black and its
+				 * right child is red
+				 */
+				sibling->right->color = sibling->color;
+				sibling->color = parent->color;
+				parent->color = MCC_RB_BLACK;
+				rb_left_rotate(root, parent);
+			} else {
+				/*
+				 * Case 4: The sibling node is black and its
+				 * left child is red.
+				 */
+				sibling->left->color = parent->color;
+				parent->color = MCC_RB_BLACK;
+				rb_right_rotate(root, sibling);
+				rb_left_rotate(root, parent);
+			}
+			break;
+		}
+	}
+}
+
+static struct mcc_rb_node *rb_node_new(const void *k, const void *v,
+				       const struct mcc_object_interface *ki,
+				       const struct mcc_object_interface *vi)
+{
+	struct mcc_rb_node *self;
+
+	self = malloc(sizeof(struct mcc_rb_node) + ki->size + vi->size);
+	if (!self)
+		return NULL;
+
+	memset(self, 0, sizeof(struct mcc_rb_node));
+	self->k = (uint8_t *)(self) + sizeof(struct mcc_rb_node);
+	self->v = (uint8_t *)(self->k) + ki->size;
+	memcpy(self->k, k, ki->size);
+	memcpy(self->v, v, vi->size);
+	return self;
+}
+
+static int rb_node_delete(struct mcc_rb_node *self,
+			  const struct mcc_object_interface *ki,
+			  const struct mcc_object_interface *vi,
+			  const bool is_recursive)
+{
+	if (!self)
+		return OK;
+
+	if (is_recursive) {
+		rb_node_delete(self->left, ki, vi, is_recursive);
+		rb_node_delete(self->right, ki, vi, is_recursive);
+	}
+
+	if (ki->dtor)
+		ki->dtor(self->k);
+	if (vi->dtor)
+		vi->dtor(self->v);
+	free(self);
+	return OK;
+}
+
+struct mcc_map *mcc_map_new(struct mcc_object_interface *key,
+			    struct mcc_object_interface *value,
+			    mcc_compare_f cmp)
+{
+	struct mcc_map *self;
+
+	if (!cmp)
+		return NULL;
+
+	if (!key || !key->size)
+		return NULL;
+
+	if (!value || !value->size)
+		return NULL;
+
+	self = calloc(1, sizeof(struct mcc_map));
+	if (!self)
+		return NULL;
+
+	self->k = *key;
+	self->v = *value;
+	self->cmp = cmp;
+	return self;
+}
+
+void mcc_map_delete(struct mcc_map *self)
+{
+	if (!self)
+		return;
+
+	mcc_map_clear(self);
+	free(self);
+}
+
+void mcc_map_clear(struct mcc_map *self)
+{
+	if (!self)
+		return;
+
+	rb_node_delete(self->root, &self->k, &self->v, true);
+	self->len = 0;
+}
+
+int mcc_map_insert(struct mcc_map *self, const void *key, const void *value)
+{
+	struct mcc_rb_node **curr, *parent;
+	int cmp_res;
+
+	if (!self || !value)
+		return INVALID_ARGUMENTS;
+
+	curr = &self->root;
+	parent = NULL;
+	while (*curr) {
+		parent = *curr;
+		cmp_res = self->cmp(key, (*curr)->k);
+		if (cmp_res > 0)
+			curr = &(*curr)->right;
+		else if (cmp_res < 0)
+			curr = &(*curr)->left;
+		else { /* Update the value. */
+			if (self->v.dtor)
+				self->v.dtor((*curr)->v);
+			memcpy((*curr)->v, value, self->v.size);
+			return OK;
+		}
+	}
+
+	*curr = rb_node_new(key, value, &self->k, &self->v);
+	if (!*curr)
+		return CANNOT_ALLOCATE_MEMORY;
+
+	(*curr)->parent = parent;
+	self->len += 1;
+	rb_fix_insert(&self->root, *curr);
+	return OK;
+}
+
+void mcc_map_remove(struct mcc_map *self, const void *key)
+{
+	struct mcc_rb_node **curr, *tmp;
+	int cmp_res;
+
+	if (!self || !key)
+		return;
+
+	curr = &self->root;
+	while (*curr) {
+		cmp_res = self->cmp(key, (*curr)->k);
+		if (cmp_res > 0)
+			curr = &(*curr)->right;
+		else if (cmp_res < 0)
+			curr = &(*curr)->left;
+		else
+			break;
+	}
+	if (!*curr) /* No such key-value pair. */
+		return;
+
+	/*
+	 * If the deleting node has two children, find its successor, swap their
+	 * key-value pairs, and make the successor the deleting node.
+	 */
+	if ((*curr)->left && (*curr)->right) {
+		tmp = *curr;
+		curr = &(*curr)->right;
+		while ((*curr)->left)
+			curr = &(*curr)->left;
+		mcc_memswap((*curr)->k, tmp->k, self->k.size);
+		mcc_memswap((*curr)->v, tmp->v, self->v.size);
+	}
+
+	tmp = *curr;
+
+	/*
+	 * If the node has only one child, the color of the child node must be
+	 * red, and the color of the node must be black.
+	 */
+	if ((*curr)->left || (*curr)->right) {
+		/*
+		 * Directly replace with the child node, and then change the
+		 * color of the child node to black.
+		 */
+		*curr = (*curr)->left ? (*curr)->left : (*curr)->right;
+		(*curr)->color = MCC_RB_BLACK;
+		(*curr)->parent = tmp->parent;
+	} else { /* The node does not have children. */
+		*curr = NULL;
+		if (tmp->color == MCC_RB_BLACK)
+			/* The deleted node becomes a double-black node.*/
+			rb_fix_remove(&self->root, tmp->parent);
+	}
+
+	rb_node_delete(tmp, &self->k, &self->v, false);
+	self->len -= 1;
+}
+
+int mcc_map_get(struct mcc_map *self, const void *key, void *value)
+{
+	void *ptr;
+
+	ptr = mcc_map_get_ptr(self, key);
+	if (!ptr)
+		return NONE;
+
+	memcpy(value, ptr, self->v.size);
+	return OK;
+}
+
+void *mcc_map_get_ptr(struct mcc_map *self, const void *key)
+{
+	struct mcc_rb_node *curr;
+	int cmp_res;
+
+	if (!self || !key)
+		return NULL;
+
+	curr = self->root;
+	while (curr) {
+		cmp_res = self->cmp(key, curr->k);
+		if (cmp_res > 0) {
+			curr = curr->right;
+		} else if (cmp_res < 0) {
+			curr = curr->left;
+		} else {
+			return curr->v;
+		}
+	}
+	return NULL;
+}
+
+size_t mcc_map_len(struct mcc_map *self)
+{
+	return !self ? 0 : self->len;
+}
+
+bool mcc_map_is_empty(struct mcc_map *self)
+{
+	return !self ? true : self->len == 0;
+}
+
+static bool mcc_map_iter_next(struct mcc_map_iter *self, void *key, void *value)
+{
+	struct mcc_rb_node *tmp;
+	mcc_compare_f cmp;
+
+	if (!self || !self->curr)
+		return false;
+
+	if (key)
+		memcpy(key, self->curr->k, self->container->k.size);
+
+	if (value)
+		memcpy(value, self->curr->v, self->container->v.size);
+
+	if (self->curr->right) {
+		/* Find the successor. */
+		tmp = self->curr->right;
+		while (tmp->left)
+			tmp = tmp->left;
+		self->curr = tmp;
+	} else {
+		tmp = self->curr->parent;
+		cmp = self->container->cmp;
+
+		while (tmp && cmp(tmp->k, self->curr->k) <= 0)
+			tmp = tmp->parent;
+		self->curr = tmp;
+	}
+	return true;
+}
+
+int mcc_map_iter_init(struct mcc_map *self, struct mcc_map_iter *iter)
+{
+	if (!self || !iter)
+		return INVALID_ARGUMENTS;
+
+	iter->curr = self->root;
+	while (iter->curr && iter->curr->left)
+		iter->curr = iter->curr->left;
+	iter->container = self;
+	iter->next = mcc_map_iter_next;
+	return OK;
+}
