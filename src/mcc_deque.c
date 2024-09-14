@@ -424,24 +424,24 @@ int mcc_deque_sort(struct mcc_deque *self, mcc_compare_f cmp)
 	return OK;
 }
 
-static bool mcc_deque_iter_next(struct mcc_deque_iter *self, void *value)
-{
-	if (!self || self->idx >= self->container->len)
-		return false;
-
-	if (value)
-		mcc_deque_get(self->container, self->idx, value);
-	self->idx++;
-	return true;
-}
-
 int mcc_deque_iter_init(struct mcc_deque *self, struct mcc_deque_iter *iter)
 {
 	if (!self || !iter)
 		return INVALID_ARGUMENTS;
 
+	iter->interface.next = (mcc_iter_next_f)&mcc_deque_iter_next;
 	iter->idx = 0;
 	iter->container = self;
-	iter->next = mcc_deque_iter_next;
 	return OK;
+}
+
+bool mcc_deque_iter_next(struct mcc_deque_iter *iter, void *result)
+{
+	if (!iter || iter->idx >= iter->container->len)
+		return false;
+
+	if (result)
+		mcc_deque_get(iter->container, iter->idx, result);
+	iter->idx++;
+	return true;
 }

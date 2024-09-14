@@ -172,24 +172,24 @@ bool mcc_heap_is_empty(struct mcc_heap *self)
 	return !self ? true : mcc_vector_is_empty(self->data);
 }
 
-static bool mcc_heap_iter_next(struct mcc_heap_iter *self, void *value)
-{
-	if (!self || self->idx >= mcc_vector_len(self->container->data))
-		return false;
-
-	if (value)
-		mcc_vector_get(self->container->data, self->idx, value);
-	self->idx++;
-	return true;
-}
-
 int mcc_heap_iter_init(struct mcc_heap *self, struct mcc_heap_iter *iter)
 {
 	if (!self || !iter)
 		return INVALID_ARGUMENTS;
 
+	iter->interface.next = (mcc_iter_next_f)&mcc_heap_iter_next;
 	iter->idx = 0;
 	iter->container = self;
-	iter->next = mcc_heap_iter_next;
 	return OK;
+}
+
+bool mcc_heap_iter_next(struct mcc_heap_iter *iter, void *result)
+{
+	if (!iter || iter->idx >= mcc_vector_len(iter->container->data))
+		return false;
+
+	if (result)
+		mcc_vector_get(iter->container->data, iter->idx, result);
+	iter->idx++;
+	return true;
 }

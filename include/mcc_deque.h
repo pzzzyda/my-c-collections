@@ -1,14 +1,15 @@
 #ifndef _MCC_DEQUE_H
 #define _MCC_DEQUE_H
 
+#include "mcc_iterator.h"
 #include "mcc_object.h"
 
 struct mcc_deque;
 
 struct mcc_deque_iter {
+	struct mcc_iterator_interface interface;
 	size_t idx;
 	struct mcc_deque *container;
-	bool (*next)(struct mcc_deque_iter *self, void *value);
 };
 
 struct mcc_deque *mcc_deque_new(const struct mcc_object_interface *element);
@@ -57,8 +58,8 @@ int mcc_deque_sort(struct mcc_deque *self, mcc_compare_f cmp);
 
 int mcc_deque_iter_init(struct mcc_deque *self, struct mcc_deque_iter *iter);
 
-extern const struct mcc_object_interface mcc_deque_object_interface;
+bool mcc_deque_iter_next(struct mcc_deque_iter *iter, void *result);
 
-#define MCC_DEQUE (&mcc_deque_object_interface)
+extern const struct mcc_object_interface mcc_deque_object_interface;
 
 #endif /* _MCC_DEQUE_H */

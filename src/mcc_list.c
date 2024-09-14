@@ -382,24 +382,24 @@ int mcc_list_sort(struct mcc_list *self, mcc_compare_f cmp)
 	return OK;
 }
 
-static bool mcc_list_iter_next(struct mcc_list_iter *self, void *value)
-{
-	if (!self || !self->curr)
-		return false;
-
-	if (value)
-		get_data(self->curr, value, &self->list->elem);
-	self->curr = self->curr->next;
-	return true;
-}
-
 int mcc_list_iter_init(struct mcc_list *self, struct mcc_list_iter *iter)
 {
 	if (!self || !iter)
 		return INVALID_ARGUMENTS;
 
+	iter->interface.next = (mcc_iter_next_f)&mcc_list_iter_next;
 	iter->curr = self->head;
 	iter->list = self;
-	iter->next = mcc_list_iter_next;
 	return OK;
+}
+
+bool mcc_list_iter_next(struct mcc_list_iter *iter, void *result)
+{
+	if (!iter || !iter->curr)
+		return false;
+
+	if (result)
+		get_data(iter->curr, result, &iter->list->elem);
+	iter->curr = iter->curr->next;
+	return true;
 }

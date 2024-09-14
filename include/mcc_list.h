@@ -1,17 +1,17 @@
 #ifndef _MCC_LIST_H
 #define _MCC_LIST_H
 
+#include "mcc_iterator.h"
 #include "mcc_object.h"
-#include "mcc_type.h"
 
 struct mcc_list_node;
 
 struct mcc_list;
 
 struct mcc_list_iter {
+	struct mcc_iterator_interface interface;
 	struct mcc_list_node *curr;
 	struct mcc_list *list;
-	bool (*next)(struct mcc_list_iter *self, void *value);
 };
 
 struct mcc_list *mcc_list_new(const struct mcc_object_interface *element);
@@ -48,8 +48,8 @@ int mcc_list_sort(struct mcc_list *self, mcc_compare_f cmp);
 
 int mcc_list_iter_init(struct mcc_list *self, struct mcc_list_iter *iter);
 
-extern const struct mcc_object_interface mcc_list_object_interface;
+bool mcc_list_iter_next(struct mcc_list_iter *iter, void *result);
 
-#define MCC_LIST (&mcc_list_object_interface)
+extern const struct mcc_object_interface mcc_list_object_interface;
 
 #endif /* _MCC_LIST_H */
