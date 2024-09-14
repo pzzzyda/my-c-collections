@@ -1,14 +1,15 @@
 #ifndef _MCC_VECTOR_H
 #define _MCC_VECTOR_H
 
+#include "mcc_iterator.h"
 #include "mcc_object.h"
 
 struct mcc_vector;
 
 struct mcc_vector_iter {
+	struct mcc_iterator_interface interface;
 	size_t idx;
 	struct mcc_vector *container;
-	bool (*next)(struct mcc_vector_iter *self, void *value);
 };
 
 struct mcc_vector *mcc_vector_new(const struct mcc_object_interface *element);
@@ -55,8 +56,8 @@ int mcc_vector_sort(struct mcc_vector *self, mcc_compare_f cmp);
 
 int mcc_vector_iter_init(struct mcc_vector *self, struct mcc_vector_iter *iter);
 
-extern const struct mcc_object_interface mcc_vector_object_interface;
+bool mcc_vector_iter_next(struct mcc_vector_iter *iter, void *result);
 
-#define MCC_VECTOR (&mcc_vector_object_interface)
+extern const struct mcc_object_interface mcc_vector_object_interface;
 
 #endif /* _MCC_VECTOR_H */

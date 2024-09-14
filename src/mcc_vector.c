@@ -283,24 +283,24 @@ int mcc_vector_sort(struct mcc_vector *self, mcc_compare_f cmp)
 	return OK;
 }
 
-static bool mcc_vector_iter_next(struct mcc_vector_iter *self, void *value)
-{
-	if (!self || self->idx >= self->container->len)
-		return false;
-
-	if (value)
-		mcc_vector_get(self->container, self->idx, value);
-	self->idx++;
-	return true;
-}
-
 int mcc_vector_iter_init(struct mcc_vector *self, struct mcc_vector_iter *iter)
 {
 	if (!self || !iter)
 		return INVALID_ARGUMENTS;
 
+	iter->interface.next = (mcc_iter_next_f)&mcc_vector_iter_next;
 	iter->idx = 0;
 	iter->container = self;
-	iter->next = mcc_vector_iter_next;
 	return OK;
+}
+
+bool mcc_vector_iter_next(struct mcc_vector_iter *iter, void *result)
+{
+	if (!iter || iter->idx >= iter->container->len)
+		return false;
+
+	if (result)
+		mcc_vector_get(iter->container, iter->idx, result);
+	iter->idx++;
+	return true;
 }
