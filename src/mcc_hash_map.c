@@ -1,12 +1,10 @@
 #include "mcc_hash_map.h"
 #include "mcc_err.h"
-#include <stdlib.h>
-#include <string.h>
+#include "mcc_utils.h"
 
 struct mcc_bucket {
 	struct mcc_bucket *next;
-	void *k;
-	void *v;
+	struct mcc_kv_pair pair;
 };
 
 struct mcc_hash_map {
@@ -35,18 +33,31 @@ static struct mcc_bucket *bucket_new(const void *k, const void *v,
 {
 	struct mcc_bucket *self;
 
-	self = malloc(sizeof(struct mcc_bucket) + ki->size + vi->size);
+	self = malloc(sizeof(struct mcc_bucket));
 	if (!self)
 		return NULL;
 
 	self->next = NULL;
-	self->k = (uint8_t *)self + sizeof(struct mcc_bucket);
-	self->v = (uint8_t *)(self->k) + ki->size;
 
-	memcpy(self->k, k, ki->size);
-	memcpy(self->v, v, vi->size);
+	self->pair.key = malloc(ki->size);
+	if (!self->pair.key)
+		goto handle_key_allocate_err;
+	memcpy(self->pair.key, k, ki->size);
+
+	self->pair.value = malloc(vi->size);
+	if (!self->pair.value)
+		goto handle_value_allocate_err;
+	memcpy(self->pair.value, v, vi->size);
 
 	return self;
+
+handle_value_allocate_err:
+	if (ki->dtor)
+		ki->dtor(self->pair.key);
+	free(self->pair.key);
+handle_key_allocate_err:
+	free(self);
+	return NULL;
 }
 
 static void bucket_delete(struct mcc_bucket *self,
@@ -57,13 +68,44 @@ static void bucket_delete(struct mcc_bucket *self,
 
 	while (self) {
 		tmp = self->next;
+
 		if (ki->dtor)
-			ki->dtor(self->k);
+			ki->dtor(self->pair.key);
+		free(self->pair.key);
+
 		if (vi->dtor)
-			vi->dtor(self->v);
+			vi->dtor(self->pair.value);
+		free(self->pair.value);
+
 		free(self);
 		self = tmp;
 	}
+}
+
+static int mcc_hash_map_rehash(struct mcc_hash_map *self, size_t new_capacity)
+{
+	struct mcc_bucket **new_bkts, *curr, *tmp;
+	size_t index;
+
+	new_bkts = calloc(new_capacity, sizeof(struct mcc_bucket *));
+	if (!new_bkts)
+		return CANNOT_ALLOCATE_MEMORY;
+
+	for (size_t i = 0; i < self->cap; i++) {
+		curr = self->bkts[i];
+		while (curr) {
+			tmp = curr->next;
+			index = self->hash(curr->pair.key) & (new_capacity - 1);
+			curr->next = new_bkts[index];
+			new_bkts[index] = curr;
+			curr = tmp;
+		}
+	}
+
+	free(self->bkts);
+	self->bkts = new_bkts;
+	self->cap = new_capacity;
+	return OK;
 }
 
 struct mcc_hash_map *mcc_hash_map_new(const struct mcc_object_interface *key,
@@ -112,8 +154,7 @@ void mcc_hash_map_delete(struct mcc_hash_map *self)
 
 int mcc_hash_map_reserve(struct mcc_hash_map *self, size_t additional)
 {
-	struct mcc_bucket **new_bkts, *curr, *tmp;
-	size_t index, new_capacity, needs;
+	size_t new_capacity, needs;
 
 	if (!self)
 		return INVALID_ARGUMENTS;
@@ -126,25 +167,7 @@ int mcc_hash_map_reserve(struct mcc_hash_map *self, size_t additional)
 	while (new_capacity < needs)
 		new_capacity <<= 1;
 
-	new_bkts = calloc(new_capacity, sizeof(struct mcc_bucket *));
-	if (!new_bkts)
-		return CANNOT_ALLOCATE_MEMORY;
-
-	for (size_t i = 0; i < self->cap; i++) {
-		curr = self->bkts[i];
-		while (curr) {
-			tmp = curr->next;
-			index = self->hash(curr->k) & (new_capacity - 1);
-			curr->next = new_bkts[index];
-			new_bkts[index] = curr;
-			curr = tmp;
-		}
-	}
-
-	free(self->bkts);
-	self->bkts = new_bkts;
-	self->cap = new_capacity;
-	return OK;
+	return mcc_hash_map_rehash(self, new_capacity);
 }
 
 int mcc_hash_map_insert(struct mcc_hash_map *self, const void *key,
@@ -159,10 +182,10 @@ int mcc_hash_map_insert(struct mcc_hash_map *self, const void *key,
 	index = self->hash(key) & (self->cap - 1);
 	curr = &self->bkts[index];
 	while (*curr) {
-		if (self->eq(key, (*curr)->k)) {
+		if (self->eq(key, (*curr)->pair.key)) {
 			if (self->v.dtor)
-				self->v.dtor((*curr)->v);
-			memcpy((*curr)->v, value, self->v.size);
+				self->v.dtor((*curr)->pair.value);
+			memcpy((*curr)->pair.value, value, self->v.size);
 			return OK;
 		}
 		curr = &(*curr)->next;
@@ -191,7 +214,7 @@ void mcc_hash_map_remove(struct mcc_hash_map *self, const void *key)
 	index = self->hash(key) & (self->cap - 1);
 	curr = &self->bkts[index];
 	while (*curr) {
-		if (self->eq(key, (*curr)->k)) {
+		if (self->eq(key, (*curr)->pair.key)) {
 			tmp = *curr;
 			*curr = (*curr)->next;
 			tmp->next = NULL;
@@ -240,8 +263,8 @@ void *mcc_hash_map_get_ptr(struct mcc_hash_map *self, const void *key)
 	index = self->hash(key) & (self->cap - 1);
 	curr = self->bkts[index];
 	while (curr) {
-		if (self->eq(key, curr->k))
-			return curr->v;
+		if (self->eq(key, curr->pair.key))
+			return curr->pair.value;
 		curr = curr->next;
 	}
 	return NULL;
@@ -257,47 +280,50 @@ size_t mcc_hash_map_len(struct mcc_hash_map *self)
 	return !self ? 0 : self->len;
 }
 
-static bool mcc_hash_map_iter_next(struct mcc_hash_map_iter *self, void *key,
-				   void *value)
-{
-	if (!self || !self->curr)
-		return false;
-
-	if (self->idx >= self->container->cap && !self->curr->next)
-		return false;
-
-	if (key)
-		memcpy(key, self->curr->k, self->container->k.size);
-
-	if (value)
-		memcpy(value, self->curr->v, self->container->v.size);
-
-	if (self->curr->next) {
-		self->curr = self->curr->next;
-	} else {
-		while (self->idx < self->container->cap &&
-		       !self->container->bkts[self->idx])
-			self->idx++;
-
-		self->curr = self->idx < self->container->cap
-				     ? self->container->bkts[self->idx++]
-				     : NULL;
-	}
-	return true;
-}
-
 int mcc_hash_map_iter_init(struct mcc_hash_map *self,
 			   struct mcc_hash_map_iter *iter)
 {
 	if (!self || !iter)
 		return INVALID_ARGUMENTS;
 
+	iter->interface.next = (mcc_iter_next_f)&mcc_hash_map_iter_next;
 	iter->idx = 0;
 	while (iter->idx < self->cap && !self->bkts[iter->idx])
 		iter->idx++;
 
 	iter->curr = iter->idx < self->cap ? self->bkts[iter->idx++] : NULL;
 	iter->container = self;
-	iter->next = mcc_hash_map_iter_next;
 	return OK;
+}
+
+bool mcc_hash_map_iter_next(struct mcc_hash_map_iter *iter, void *result)
+{
+	struct mcc_bucket *curr;
+	struct mcc_hash_map *map;
+
+	if (!iter || !iter->curr)
+		return false;
+
+	curr = iter->curr;
+	map = iter->container;
+	if (iter->idx >= map->cap && !curr->next)
+		return false;
+
+	if (result)
+		memcpy(result, &curr->pair, sizeof(struct mcc_kv_pair));
+
+	if (curr->next) {
+		iter->curr = curr->next;
+	} else {
+		while (iter->idx < map->cap && !map->bkts[iter->idx])
+			iter->idx++;
+
+		if (iter->idx < map->cap) {
+			iter->curr = map->bkts[iter->idx];
+			iter->idx++;
+		} else {
+			iter->curr = NULL;
+		}
+	}
+	return true;
 }

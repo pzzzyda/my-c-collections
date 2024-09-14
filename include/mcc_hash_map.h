@@ -1,6 +1,7 @@
 #ifndef _MCC_HASH_MAP_H
 #define _MCC_HASH_MAP_H
 
+#include "mcc_iterator.h"
 #include "mcc_object.h"
 
 struct mcc_bucket;
@@ -8,10 +9,10 @@ struct mcc_bucket;
 struct mcc_hash_map;
 
 struct mcc_hash_map_iter {
+	struct mcc_iterator_interface interface;
 	size_t idx;
 	struct mcc_bucket *curr;
 	struct mcc_hash_map *container;
-	bool (*next)(struct mcc_hash_map_iter *self, void *key, void *value);
 };
 
 struct mcc_hash_map *mcc_hash_map_new(const struct mcc_object_interface *key,
@@ -42,8 +43,8 @@ bool mcc_hash_map_is_empty(struct mcc_hash_map *self);
 int mcc_hash_map_iter_init(struct mcc_hash_map *self,
 			   struct mcc_hash_map_iter *iter);
 
-extern const struct mcc_object_interface mcc_hash_map_object_interface;
+bool mcc_hash_map_iter_next(struct mcc_hash_map_iter *iter, void *result);
 
-#define MCC_HASH_MAP (&mcc_hash_map_object_interface)
+extern const struct mcc_object_interface mcc_hash_map_object_interface;
 
 #endif /* _MCC_HASH_MAP_H */

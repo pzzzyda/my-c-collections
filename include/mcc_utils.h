@@ -29,4 +29,9 @@ static inline void mcc_memswap(void *p1, void *p2, size_t n)
 	}
 }
 
+struct mcc_kv_pair {
+	void *key;
+	void *value;
+};
+
 #endif /* _MCC_UTILS_H */
