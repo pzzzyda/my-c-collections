@@ -1,16 +1,22 @@
 #ifndef _MCC_MAP_H
 #define _MCC_MAP_H
 
+#include "mcc_iterator.h"
 #include "mcc_object.h"
 
 struct mcc_map;
 
 struct mcc_rb_node;
 
+enum {
+	MCC_RB_RED,
+	MCC_RB_BLACK,
+};
+
 struct mcc_map_iter {
+	struct mcc_iterator_interface interface;
 	struct mcc_rb_node *curr;
 	struct mcc_map *container;
-	bool (*next)(struct mcc_map_iter *self, void *key, void *value);
 };
 
 struct mcc_map *mcc_map_new(struct mcc_object_interface *key,
@@ -34,6 +40,8 @@ size_t mcc_map_len(struct mcc_map *self);
 bool mcc_map_is_empty(struct mcc_map *self);
 
 int mcc_map_iter_init(struct mcc_map *self, struct mcc_map_iter *iter);
+
+bool mcc_map_iter_next(struct mcc_map_iter *iter, void *result);
 
 extern const struct mcc_object_interface mcc_map_object_interface;
 
