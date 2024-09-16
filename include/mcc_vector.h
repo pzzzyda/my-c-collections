@@ -52,12 +52,10 @@ int mcc_vector_swap(struct mcc_vector *self, size_t a, size_t b);
 
 int mcc_vector_reverse(struct mcc_vector *self);
 
-int mcc_vector_sort(struct mcc_vector *self, mcc_compare_f cmp);
+int mcc_vector_sort(struct mcc_vector *self);
 
 int mcc_vector_iter_init(struct mcc_vector *self, struct mcc_vector_iter *iter);
 
 bool mcc_vector_iter_next(struct mcc_vector_iter *iter, void *result);
-
-extern const struct mcc_object_interface mcc_vector_object_interface;
 
 #endif /* _MCC_VECTOR_H */

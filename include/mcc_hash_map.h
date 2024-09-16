@@ -16,8 +16,7 @@ struct mcc_hash_map_iter {
 };
 
 struct mcc_hash_map *mcc_hash_map_new(const struct mcc_object_interface *key,
-				      const struct mcc_object_interface *value,
-				      mcc_hash_f hash, mcc_equal_f equal);
+				      const struct mcc_object_interface *value);
 
 void mcc_hash_map_delete(struct mcc_hash_map *self);
 
@@ -44,7 +43,5 @@ int mcc_hash_map_iter_init(struct mcc_hash_map *self,
 			   struct mcc_hash_map_iter *iter);
 
 bool mcc_hash_map_iter_next(struct mcc_hash_map_iter *iter, void *result);
-
-extern const struct mcc_object_interface mcc_hash_map_object_interface;
 
 #endif /* _MCC_HASH_MAP_H */

@@ -44,12 +44,10 @@ size_t mcc_list_len(struct mcc_list *self);
 
 bool mcc_list_is_empty(struct mcc_list *self);
 
-int mcc_list_sort(struct mcc_list *self, mcc_compare_f cmp);
+int mcc_list_sort(struct mcc_list *self);
 
 int mcc_list_iter_init(struct mcc_list *self, struct mcc_list_iter *iter);
 
 bool mcc_list_iter_next(struct mcc_list_iter *iter, void *result);
-
-extern const struct mcc_object_interface mcc_list_object_interface;
 
 #endif /* _MCC_LIST_H */

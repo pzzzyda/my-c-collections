@@ -14,9 +14,27 @@ static void mcc_vector_dtor(void *self)
 	mcc_vector_delete(*(struct mcc_vector **)self);
 }
 
-const struct mcc_object_interface mcc_vector_object_interface = {
+static int mcc_vector_cmp(const void *self, const void *other)
+{
+	struct mcc_vector *const *p1 = self;
+	struct mcc_vector *const *p2 = other;
+
+	return mcc_size_t_i.cmp(&(**p1).len, &(**p2).len);
+}
+
+static size_t mcc_vector_hash(const void *self)
+{
+	struct mcc_vector *const *p = self;
+
+	return mcc_str_i.hash((**p).elem.name) * mcc_size_t_i.hash(&(**p).len);
+}
+
+const struct mcc_object_interface mcc_vector_i = {
+	.name = "struct mcc_vector *",
 	.size = sizeof(struct mcc_vector *),
-	.dtor = mcc_vector_dtor,
+	.dtor = &mcc_vector_dtor,
+	.cmp = &mcc_vector_cmp,
+	.hash = &mcc_vector_hash,
 };
 
 static inline void *get_ptr(struct mcc_vector *self, size_t index)
@@ -34,16 +52,13 @@ struct mcc_vector *mcc_vector_new(const struct mcc_object_interface *element)
 {
 	struct mcc_vector *self;
 
-	if (!element || !element->size)
+	if (!element)
 		return NULL;
 
-	self = malloc(sizeof(struct mcc_vector));
+	self = calloc(1, sizeof(struct mcc_vector));
 	if (!self)
 		return NULL;
 
-	self->ptr = NULL;
-	self->len = 0;
-	self->cap = 0;
 	self->elem = *element;
 	return self;
 }
@@ -271,15 +286,15 @@ int mcc_vector_reverse(struct mcc_vector *self)
 	return OK;
 }
 
-int mcc_vector_sort(struct mcc_vector *self, mcc_compare_f cmp)
+int mcc_vector_sort(struct mcc_vector *self)
 {
-	if (!self || !cmp)
+	if (!self)
 		return INVALID_ARGUMENTS;
 
 	if (self->len <= 1)
 		return OK;
 
-	qsort(self->ptr, self->len, self->elem.size, cmp);
+	qsort(self->ptr, self->len, self->elem.size, self->elem.cmp);
 	return OK;
 }
 

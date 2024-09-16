@@ -19,9 +19,8 @@ struct mcc_map_iter {
 	struct mcc_map *container;
 };
 
-struct mcc_map *mcc_map_new(struct mcc_object_interface *key,
-			    struct mcc_object_interface *value,
-			    mcc_compare_f cmp);
+struct mcc_map *mcc_map_new(const struct mcc_object_interface *key,
+			    const struct mcc_object_interface *value);
 
 void mcc_map_delete(struct mcc_map *self);
 
@@ -42,7 +41,5 @@ bool mcc_map_is_empty(struct mcc_map *self);
 int mcc_map_iter_init(struct mcc_map *self, struct mcc_map_iter *iter);
 
 bool mcc_map_iter_next(struct mcc_map_iter *iter, void *result);
-
-extern const struct mcc_object_interface mcc_map_object_interface;
 
 #endif /* _MCC_MAP_H */

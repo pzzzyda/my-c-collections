@@ -1,6 +1,5 @@
 #include "mcc_list.h"
 #include "mcc_err.h"
-#include "mcc_type.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -27,9 +26,27 @@ static void mcc_list_dtor(void *self)
 	mcc_list_delete(*(struct mcc_list **)self);
 }
 
-const struct mcc_object_interface mcc_list_object_interface = {
+static int mcc_list_cmp(const void *self, const void *other)
+{
+	struct mcc_list *const *p1 = self;
+	struct mcc_list *const *p2 = other;
+
+	return mcc_size_t_i.cmp(&(**p1).len, &(**p2).len);
+}
+
+static size_t mcc_list_hash(const void *self)
+{
+	struct mcc_list *const *p = self;
+
+	return mcc_str_i.hash((**p).elem.name) * mcc_size_t_i.hash(&(**p).len);
+}
+
+const struct mcc_object_interface mcc_list_i = {
+	.name = "struct mcc_list *",
 	.size = sizeof(struct mcc_list *),
-	.dtor = mcc_list_dtor,
+	.dtor = &mcc_list_dtor,
+	.cmp = &mcc_list_cmp,
+	.hash = &mcc_list_hash,
 };
 
 static inline void *get_data_ptr(struct mcc_list_node *self)
@@ -69,16 +86,13 @@ struct mcc_list *mcc_list_new(const struct mcc_object_interface *element)
 {
 	struct mcc_list *self;
 
-	if (!element || !element->size)
+	if (!element)
 		return NULL;
 
-	self = malloc(sizeof(struct mcc_list));
+	self = calloc(1, sizeof(struct mcc_list));
 	if (!self)
 		return NULL;
 
-	self->head = NULL;
-	self->tail = NULL;
-	self->len = 0;
 	self->elem = *element;
 	return self;
 }
@@ -366,17 +380,17 @@ static void merge_sort(struct mcc_list_node *head, struct mcc_list_node *result,
 	merge(left.head, right.head, result, cmp);
 }
 
-int mcc_list_sort(struct mcc_list *self, mcc_compare_f cmp)
+int mcc_list_sort(struct mcc_list *self)
 {
 	struct mcc_list_node sorted = {0};
 
-	if (!self || !cmp)
+	if (!self)
 		return INVALID_ARGUMENTS;
 
 	if (self->len <= 1)
 		return OK;
 
-	merge_sort(self->head, &sorted, cmp);
+	merge_sort(self->head, &sorted, self->elem.cmp);
 	self->head = sorted.head;
 	self->tail = sorted.tail;
 	return OK;

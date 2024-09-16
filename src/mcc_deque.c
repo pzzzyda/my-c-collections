@@ -15,9 +15,27 @@ static void mcc_deque_dtor(void *self)
 	mcc_deque_delete(*(struct mcc_deque **)self);
 }
 
-const struct mcc_object_interface mcc_deque_object_interface = {
+static int mcc_deque_cmp(const void *self, const void *other)
+{
+	struct mcc_deque *const *p1 = self;
+	struct mcc_deque *const *p2 = other;
+
+	return mcc_size_t_i.cmp(&(**p1).len, &(**p2).len);
+}
+
+static size_t mcc_deque_hash(const void *self)
+{
+	struct mcc_deque *const *p = self;
+
+	return mcc_str_i.hash((**p).elem.name) * mcc_size_t_i.hash(&(**p).len);
+}
+
+const struct mcc_object_interface mcc_deque_i = {
+	.name = "struct mcc_deque *",
 	.size = sizeof(struct mcc_deque *),
-	.dtor = mcc_deque_dtor,
+	.dtor = &mcc_deque_dtor,
+	.cmp = &mcc_deque_cmp,
+	.hash = &mcc_deque_hash,
 };
 
 static inline size_t mod_idx(struct mcc_deque *self, size_t index)
@@ -157,17 +175,13 @@ struct mcc_deque *mcc_deque_new(const struct mcc_object_interface *element)
 {
 	struct mcc_deque *self;
 
-	if (!element || !element->size)
+	if (!element)
 		return NULL;
 
-	self = malloc(sizeof(struct mcc_deque));
+	self = calloc(1, sizeof(struct mcc_deque));
 	if (!self)
 		return NULL;
 
-	self->ptr = NULL;
-	self->len = 0;
-	self->head = 0;
-	self->cap = 0;
 	self->elem = *element;
 	return self;
 }
@@ -412,15 +426,15 @@ static void quick_sort(struct mcc_deque *self, size_t low, size_t high,
 	quick_sort(self, mid + 1, high, cmp);
 }
 
-int mcc_deque_sort(struct mcc_deque *self, mcc_compare_f cmp)
+int mcc_deque_sort(struct mcc_deque *self)
 {
-	if (!self || !cmp)
+	if (!self)
 		return INVALID_ARGUMENTS;
 
 	if (self->len <= 1)
 		return OK;
 
-	quick_sort(self, 0, self->len - 1, cmp);
+	quick_sort(self, 0, self->len - 1, self->elem.cmp);
 	return OK;
 }
 

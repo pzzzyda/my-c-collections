@@ -29,7 +29,6 @@ extern const struct mcc_object_interface mcc_str_i;
 extern const struct mcc_object_interface mcc_size_t_i;
 
 extern const struct mcc_object_interface mcc_vector_i;
-extern const struct mcc_object_interface mcc_heap_i;
 extern const struct mcc_object_interface mcc_deque_i;
 extern const struct mcc_object_interface mcc_list_i;
 extern const struct mcc_object_interface mcc_hash_map_i;
