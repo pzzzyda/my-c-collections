@@ -1,4 +1,5 @@
 #include "mcc_deque.h"
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -9,26 +10,98 @@ struct fruit {
 	int color;
 };
 
-MCC_DESTRUCTOR(fruit, {
+static void fruit_dtor(void *ptr)
+{
+	struct fruit *self = ptr;
+
 	if (self->name) {
 		printf("~destruct: %s\n", self->name);
 		free(self->name);
 	}
-})
-
-int cmp_int(const void *a, const void *b)
-{
-	return *(const int *)a - *(const int *)b;
 }
 
-bool is_ordered(struct mcc_deque *d)
+static const struct mcc_object_interface fruit_i = {
+	.name = "struct fruit",
+	.size = sizeof(struct fruit),
+	.dtor = &fruit_dtor,
+	.cmp = NULL,
+	.hash = NULL,
+};
+
+static void print_int_deque(struct mcc_deque *d, const char *fmt, ...)
+{
+	struct mcc_deque_iter iter;
+
+	va_list args;
+	va_start(args, fmt);
+	vprintf(fmt, args);
+	va_end(args);
+
+	mcc_deque_iter_init(d, &iter);
+	for (int i; mcc_deque_iter_next(&iter, &i); i++)
+		printf("%d ", i);
+	putchar('\n');
+}
+
+static int test_store_int(void)
+{
+	struct mcc_deque *d;
+
+	d = mcc_deque_new(&mcc_i32_i);
+
+	mcc_deque_push_back(d, &(int){0});
+	mcc_deque_push_back(d, &(int){1});
+	mcc_deque_push_back(d, &(int){2});
+	mcc_deque_push_back(d, &(int){3});
+	mcc_deque_push_front(d, &(int){0});
+	mcc_deque_push_front(d, &(int){1});
+	mcc_deque_push_front(d, &(int){2});
+	mcc_deque_push_front(d, &(int){3});
+	print_int_deque(d, "Raw data:\n");
+
+	mcc_deque_insert(d, 3, &(int){30});
+	print_int_deque(d, "Insert 30 at 3:\n");
+
+	mcc_deque_remove(d, 5);
+	print_int_deque(d, "Remove element at 5:\n");
+
+	mcc_deque_insert(d, 2, &(int){20});
+	print_int_deque(d, "Insert 20 at 2:\n");
+
+	mcc_deque_delete(d);
+
+	return 0;
+}
+
+static int test_store_fruit(void)
+{
+	struct mcc_deque *d;
+
+	d = mcc_deque_new(&fruit_i);
+
+	mcc_deque_push_back(d, &(struct fruit){strdup("A"), 0});
+	mcc_deque_push_back(d, &(struct fruit){strdup("B"), 0});
+	mcc_deque_push_back(d, &(struct fruit){strdup("C"), 0});
+	mcc_deque_push_front(d, &(struct fruit){strdup("D"), 0});
+	mcc_deque_push_front(d, &(struct fruit){strdup("E"), 0});
+	mcc_deque_push_front(d, &(struct fruit){strdup("F"), 0});
+
+	mcc_deque_insert(d, 2, &(struct fruit){strdup("G"), 0});
+
+	mcc_deque_remove(d, 4);
+
+	mcc_deque_delete(d);
+	return 0;
+}
+
+static bool is_ordered(struct mcc_deque *d)
 {
 	struct mcc_deque_iter iter;
 	int a, b;
 
 	mcc_deque_iter_init(d, &iter);
-	iter.next(&iter, &a);
-	while (iter.next(&iter, &b)) {
+	mcc_deque_iter_next(&iter, &a);
+	while (mcc_deque_iter_next(&iter, &b)) {
 		if (b < a)
 			return false;
 		a = b;
@@ -36,108 +109,63 @@ bool is_ordered(struct mcc_deque *d)
 	return true;
 }
 
-int main()
+static int test_sort_int_deque(void)
 {
-	struct mcc_deque *d1;
-	struct mcc_deque *d2;
-	struct mcc_deque *d3;
-	struct mcc_deque *d4;
-	struct mcc_deque_iter iter;
+	struct mcc_deque *d;
 
-	d1 = mcc_deque_new(MCC_BASICS(int));
-
-	mcc_deque_push_back(d1, &(int){0});
-	mcc_deque_push_back(d1, &(int){1});
-	mcc_deque_push_back(d1, &(int){2});
-	mcc_deque_push_back(d1, &(int){3});
-	mcc_deque_push_front(d1, &(int){0});
-	mcc_deque_push_front(d1, &(int){1});
-	mcc_deque_push_front(d1, &(int){2});
-	mcc_deque_push_front(d1, &(int){3});
-
-	mcc_deque_iter_init(d1, &iter);
-	for (int i; iter.next(&iter, &i); i++)
-		printf("%d ", i);
-	putchar('\n');
-
-	mcc_deque_insert(d1, 3, &(int){30});
-	mcc_deque_iter_init(d1, &iter);
-	for (int i; iter.next(&iter, &i); i++)
-		printf("%d ", i);
-	putchar('\n');
-
-	mcc_deque_remove(d1, 5);
-	mcc_deque_iter_init(d1, &iter);
-	for (int i; iter.next(&iter, &i); i++)
-		printf("%d ", i);
-	putchar('\n');
-
-	mcc_deque_insert(d1, 2, &(int){20});
-	mcc_deque_iter_init(d1, &iter);
-	for (int i; iter.next(&iter, &i); i++)
-		printf("%d ", i);
-	putchar('\n');
-
-	d2 = mcc_deque_new(MCC_OBJECT(fruit));
-
-	mcc_deque_push_back(d2, &(struct fruit){strdup("A"), 0});
-	mcc_deque_push_back(d2, &(struct fruit){strdup("B"), 0});
-	mcc_deque_push_back(d2, &(struct fruit){strdup("C"), 0});
-	mcc_deque_push_front(d2, &(struct fruit){strdup("D"), 0});
-	mcc_deque_push_front(d2, &(struct fruit){strdup("E"), 0});
-	mcc_deque_push_front(d2, &(struct fruit){strdup("F"), 0});
-	mcc_deque_insert(d2, 2, &(struct fruit){strdup("G"), 0});
-	mcc_deque_remove(d2, 4);
-
-	mcc_deque_iter_init(d2, &iter);
-	for (struct fruit f; iter.next(&iter, &f);)
-		printf("name: %s, color: %d\n", f.name, f.color);
-
-	d3 = mcc_deque_new(MCC_BASICS(int));
+	d = mcc_deque_new(&mcc_i32_i);
 
 	srand(time(NULL));
 	for (size_t i = 0; i < 51894; i++)
-		mcc_deque_push_back(d3, &(int){rand()});
+		mcc_deque_push_back(d, &(int){rand()});
 	for (size_t i = 0; i < 78123; i++)
-		mcc_deque_push_front(d3, &(int){rand()});
+		mcc_deque_push_front(d, &(int){rand()});
 
-	mcc_deque_sort(d3, cmp_int);
+	mcc_deque_sort(d);
 
-	if (is_ordered(d3))
+	if (is_ordered(d))
 		puts("OK");
 	else
-	 	puts("ERR");
+		puts("ERR");
 
-	d4 = mcc_deque_new(MCC_DEQUE);
+	mcc_deque_delete(d);
+
+	return 0;
+}
+
+static int test_store_int_deque(void)
+{
+	struct mcc_deque *d, *tmp;
+	struct mcc_deque_iter iter;
+
+	d = mcc_deque_new(&mcc_deque_i);
 
 	for (size_t i = 0; i < 5; i++) {
-		struct mcc_deque *t;
-		t = mcc_deque_new(MCC_BASICS(int));
-		mcc_deque_push_back(d4, &t);
+		tmp = mcc_deque_new(&mcc_i32_i);
+		mcc_deque_push_back(d, &tmp);
 	}
 
-	mcc_deque_iter_init(d4, &iter);
-	for (struct mcc_deque *t; iter.next(&iter, &t);) {
-		mcc_deque_push_back(t, &(int){0});
-		mcc_deque_push_back(t, &(int){1});
-		mcc_deque_push_front(t, &(int){2});
-		mcc_deque_push_front(t, &(int){3});
+	mcc_deque_iter_init(d, &iter);
+	while (mcc_deque_iter_next(&iter, &tmp)) {
+		mcc_deque_push_back(tmp, &(int){0});
+		mcc_deque_push_back(tmp, &(int){1});
+		mcc_deque_push_front(tmp, &(int){2});
+		mcc_deque_push_front(tmp, &(int){3});
 	}
 
-	mcc_deque_iter_init(d4, &iter);
-	for (struct mcc_deque *tmp; iter.next(&iter, &tmp);) {
-		size_t len = mcc_deque_len(tmp);
-		for (size_t i = 0;i < len; i++) {
-			int t;
-			mcc_deque_get(tmp, i, &t);
-			printf("%d ", t);
-		}
-		putchar('\n');
-	}
+	mcc_deque_iter_init(d, &iter);
+	for (size_t i = 0; mcc_deque_iter_next(&iter, &tmp); i++)
+		print_int_deque(tmp, "[%ld]:", i);
 
-	mcc_deque_delete(d1);
-	mcc_deque_delete(d2);
-	mcc_deque_delete(d3);
-	mcc_deque_delete(d4);
+	mcc_deque_delete(d);
+	return 0;
+}
+
+int main(int argc, char **argv)
+{
+	test_store_int();
+	test_store_fruit();
+	test_sort_int_deque();
+	test_store_int_deque();
 	return 0;
 }

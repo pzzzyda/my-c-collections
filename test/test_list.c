@@ -9,26 +9,98 @@ struct fruit {
 	int color;
 };
 
-MCC_DESTRUCTOR(fruit, {
+static void fruit_dtor(void *ptr)
+{
+	struct fruit *self = ptr;
+
 	if (self->name) {
 		printf("~destruct: %s\n", self->name);
 		free(self->name);
 	}
-})
-
-int cmp_int(const void *a, const void *b)
-{
-	return *(const int *)a - *(const int *)b;
 }
 
-bool is_ordered(struct mcc_list *l)
+static const struct mcc_object_interface fruit_i = {
+	.name = "struct fruit",
+	.size = sizeof(struct fruit),
+	.dtor = &fruit_dtor,
+};
+
+static int test_store_int(void)
+{
+	struct mcc_list *l;
+	struct mcc_list_iter iter;
+
+	l = mcc_list_new(&mcc_i32_i);
+
+	mcc_list_push_back(l, &(int){0});
+	mcc_list_push_back(l, &(int){1});
+	mcc_list_push_back(l, &(int){2});
+	mcc_list_push_back(l, &(int){3});
+	mcc_list_push_front(l, &(int){0});
+	mcc_list_push_front(l, &(int){1});
+	mcc_list_push_front(l, &(int){2});
+	mcc_list_push_front(l, &(int){3});
+
+	mcc_list_iter_init(l, &iter);
+	for (int i; mcc_list_iter_next(&iter, &i); i++)
+		printf("%d ", i);
+	putchar('\n');
+
+	mcc_list_insert(l, 3, &(int){30});
+	mcc_list_iter_init(l, &iter);
+	for (int i; mcc_list_iter_next(&iter, &i); i++)
+		printf("%d ", i);
+	putchar('\n');
+
+	mcc_list_remove(l, 5);
+	mcc_list_iter_init(l, &iter);
+	for (int i; mcc_list_iter_next(&iter, &i); i++)
+		printf("%d ", i);
+	putchar('\n');
+
+	mcc_list_insert(l, 2, &(int){20});
+	mcc_list_iter_init(l, &iter);
+	for (int i; mcc_list_iter_next(&iter, &i); i++)
+		printf("%d ", i);
+	putchar('\n');
+
+	mcc_list_delete(l);
+
+	return 0;
+}
+
+static int test_store_fruit(void)
+{
+	struct mcc_list *l;
+	struct mcc_list_iter iter;
+	l = mcc_list_new(&fruit_i);
+
+	mcc_list_push_back(l, &(struct fruit){strdup("A"), 0});
+	mcc_list_push_back(l, &(struct fruit){strdup("B"), 0});
+	mcc_list_push_back(l, &(struct fruit){strdup("C"), 0});
+	mcc_list_push_front(l, &(struct fruit){strdup("D"), 0});
+	mcc_list_push_front(l, &(struct fruit){strdup("E"), 0});
+	mcc_list_push_front(l, &(struct fruit){strdup("F"), 0});
+	mcc_list_insert(l, 2, &(struct fruit){strdup("G"), 0});
+	mcc_list_remove(l, 4);
+
+	mcc_list_iter_init(l, &iter);
+	for (struct fruit f; mcc_list_iter_next(&iter, &f);)
+		printf("name: %s, color: %d\n", f.name, f.color);
+
+	mcc_list_delete(l);
+
+	return 0;
+}
+
+static bool is_ordered(struct mcc_list *l)
 {
 	struct mcc_list_iter iter;
 	int a, b;
 
 	mcc_list_iter_init(l, &iter);
-	iter.next(&iter, &a);
-	while (iter.next(&iter, &b)) {
+	mcc_list_iter_next(&iter, &a);
+	while (mcc_list_iter_next(&iter, &b)) {
 		if (b < a)
 			return false;
 		a = b;
@@ -36,114 +108,33 @@ bool is_ordered(struct mcc_list *l)
 	return true;
 }
 
-int main()
+static int test_sort_int_list(void)
 {
-	struct mcc_list *l1;
-	struct mcc_list *l2;
-	struct mcc_list *l3;
-	struct mcc_list *l4;
-	struct mcc_list_iter iter;
-
-	l1 = mcc_list_new(MCC_BASICS(int));
-
-	mcc_list_push_back(l1, &(int){0});
-	mcc_list_push_back(l1, &(int){1});
-	mcc_list_push_back(l1, &(int){2});
-	mcc_list_push_back(l1, &(int){3});
-	mcc_list_push_front(l1, &(int){0});
-	mcc_list_push_front(l1, &(int){1});
-	mcc_list_push_front(l1, &(int){2});
-	mcc_list_push_front(l1, &(int){3});
-
-	mcc_list_iter_init(l1, &iter);
-	for (int i; iter.next(&iter, &i); i++)
-		printf("%d ", i);
-	putchar('\n');
-
-	mcc_list_insert(l1, 3, &(int){30});
-	mcc_list_iter_init(l1, &iter);
-	for (int i; iter.next(&iter, &i); i++)
-		printf("%d ", i);
-	putchar('\n');
-
-	mcc_list_remove(l1, 5);
-	mcc_list_iter_init(l1, &iter);
-	for (int i; iter.next(&iter, &i); i++)
-		printf("%d ", i);
-	putchar('\n');
-
-	mcc_list_insert(l1, 2, &(int){20});
-	mcc_list_iter_init(l1, &iter);
-	for (int i; iter.next(&iter, &i); i++)
-		printf("%d ", i);
-	putchar('\n');
-
-	l2 = mcc_list_new(MCC_OBJECT(fruit));
-
-	mcc_list_push_back(l2, &(struct fruit){strdup("A"), 0});
-	mcc_list_push_back(l2, &(struct fruit){strdup("B"), 0});
-	mcc_list_push_back(l2, &(struct fruit){strdup("C"), 0});
-	mcc_list_push_front(l2, &(struct fruit){strdup("D"), 0});
-	mcc_list_push_front(l2, &(struct fruit){strdup("E"), 0});
-	mcc_list_push_front(l2, &(struct fruit){strdup("F"), 0});
-	mcc_list_insert(l2, 2, &(struct fruit){strdup("G"), 0});
-	mcc_list_remove(l2, 4);
-
-	mcc_list_iter_init(l2, &iter);
-	for (struct fruit f; iter.next(&iter, &f);)
-		printf("name: %s, color: %d\n", f.name, f.color);
-
-	l3 = mcc_list_new(MCC_BASICS(int));
+	struct mcc_list *l;
+	l = mcc_list_new(&mcc_i32_i);
 
 	srand(time(NULL));
 	for (size_t i = 0; i < 51431; i++)
-		mcc_list_push_back(l3, &(int){rand()});
+		mcc_list_push_back(l, &(int){rand()});
 	for (size_t i = 0; i < 78413; i++)
-		mcc_list_push_front(l3, &(int){rand()});
+		mcc_list_push_front(l, &(int){rand()});
 
-	mcc_list_sort(l3, cmp_int);
+	mcc_list_sort(l);
 
-	if (is_ordered(l3))
+	if (is_ordered(l))
 		puts("OK");
 	else
 		puts("ERR");
 
-	l4 = mcc_list_new(MCC_LIST);
+	mcc_list_delete(l);
 
-	for (size_t i = 0; i < 5; i++) {
-		struct mcc_list *tmp;
-		tmp = mcc_list_new(MCC_BASICS(int));
-		mcc_list_push_back(l4, &tmp);
-	}
+	return 0;
+}
 
-	for (size_t i = 0; i < 5; i++) {
-		struct mcc_list *tmp;
-		tmp = mcc_list_new(MCC_BASICS(int));
-		mcc_list_push_back(l4, &tmp);
-	}
-
-	mcc_list_iter_init(l4, &iter);
-	for (struct mcc_list *tmp; iter.next(&iter, &tmp);) {
-		mcc_list_push_back(tmp, &(int){0});
-		mcc_list_push_back(tmp, &(int){1});
-		mcc_list_push_back(tmp, &(int){2});
-		mcc_list_push_front(tmp, &(int){0});
-		mcc_list_push_front(tmp, &(int){1});
-		mcc_list_push_front(tmp, &(int){2});
-	}
-
-	mcc_list_iter_init(l4, &iter);
-	for (struct mcc_list *tmp; iter.next(&iter, &tmp);) {
-		struct mcc_list_iter i;
-		mcc_list_iter_init(tmp, &i);
-		for (int t; i.next(&i, &t);)
-			printf("%d ", t);
-		putchar('\n');
-	}
-
-	mcc_list_delete(l1);
-	mcc_list_delete(l2);
-	mcc_list_delete(l3);
-	mcc_list_delete(l4);
+int main(int argc, char **argv)
+{
+	test_store_int();
+	test_store_fruit();
+	test_sort_int_list();
 	return 0;
 }

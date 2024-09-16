@@ -1,119 +1,94 @@
 #include "mcc_hash_map.h"
+#include "mcc_utils.h"
 #include "mcc_vector.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
+#include <time.h>
 
-void str_key_dtor(void *self)
+static int test_str_key_int_value(void)
 {
-	if (*(char **)self)
-		free(*(char **)self);
+	struct mcc_hash_map *map;
+	struct mcc_hash_map_iter iter;
+
+	map = mcc_hash_map_new(&mcc_str_i, &mcc_i32_i);
+
+	mcc_hash_map_insert(map, "89ba21", &(int){0});
+	mcc_hash_map_insert(map, "b412ca", &(int){1});
+	mcc_hash_map_insert(map, "b9ac44", &(int){2});
+	mcc_hash_map_insert(map, "43aa43", &(int){3});
+	mcc_hash_map_insert(map, "13ba1d", &(int){4});
+	mcc_hash_map_insert(map, "7531ba", &(int){5});
+	mcc_hash_map_insert(map, "21ce90", &(int){6});
+	mcc_hash_map_insert(map, "5421ba", &(int){7});
+	mcc_hash_map_insert(map, "af231e", &(int){8});
+	mcc_hash_map_insert(map, "d1b53a", &(int){9});
+
+	mcc_hash_map_remove(map, "b9ac44");
+
+	mcc_hash_map_iter_init(map, &iter);
+	for (struct mcc_kv_pair pair; mcc_hash_map_iter_next(&iter, &pair);)
+		printf("(%s, %d)\n", (char *)pair.key, *(int *)pair.value);
+	putchar('\n');
+
+	mcc_hash_map_delete(map);
+
+	return 0;
 }
 
-size_t str_key_hash(const void *key)
+static int test_str_key_vector_value(void)
 {
-	const char *c = *(const char **)key;
-	size_t h = 0;
-	while (*c) {
-		h = h * 31 + *c;
-		c++;
-	}
-	return h;
-}
-
-bool str_key_eq(const void *a, const void *b)
-{
-	return strcmp(*(const char **)a, *(const char **)b) == 0;
-}
-
-struct fruit {
-	char *name;
-	int color;
-};
-
-MCC_DESTRUCTOR(fruit, {
-	if (self->name) {
-		printf("~destruct: %s\n", self->name);
-		free(self->name);
-	}
-})
-
-int main()
-{
-	struct mcc_hash_map *h1;
-	struct mcc_hash_map *h2;
-	struct mcc_hash_map *h3;
+	struct mcc_hash_map *map;
 	struct mcc_vector *tmp;
 	struct mcc_hash_map_iter iter;
-	char *k;
-	int v;
 
-	h1 = mcc_hash_map_new(MCC_OBJECT_CREATE(char *, str_key_dtor),
-			      MCC_BASICS(int), str_key_hash, str_key_eq);
+	map = mcc_hash_map_new(&mcc_str_i, &mcc_vector_i);
 
-	mcc_hash_map_insert(h1, &(char *){strdup("Apple")}, &(int){0});
-	mcc_hash_map_insert(h1, &(char *){strdup("Banana")}, &(int){1});
-	mcc_hash_map_insert(h1, &(char *){strdup("Pear")}, &(int){2});
-	mcc_hash_map_insert(h1, &(char *){strdup("Peach")}, &(int){3});
-	mcc_hash_map_insert(h1, &(char *){strdup("Watermelon")}, &(int){4});
-	mcc_hash_map_insert(h1, &(char *){strdup("Pineapple")}, &(int){5});
+	tmp = mcc_vector_new(&mcc_i32_i);
+	mcc_hash_map_insert(map, "a021be", &tmp);
+	tmp = mcc_vector_new(&mcc_i32_i);
+	mcc_hash_map_insert(map, "92b341", &tmp);
+	tmp = mcc_vector_new(&mcc_i32_i);
+	mcc_hash_map_insert(map, "891b7a", &tmp);
+	tmp = mcc_vector_new(&mcc_i32_i);
+	mcc_hash_map_insert(map, "5ab362", &tmp);
+	tmp = mcc_vector_new(&mcc_i32_i);
+	mcc_hash_map_insert(map, "1bf2e0", &tmp);
 
-	mcc_hash_map_insert(h1, &(char *){"Pear"}, &(int){20});
-
-	mcc_hash_map_iter_init(h1, &iter);
-	while (iter.next(&iter, &k, &v)) {
-		printf("(%s: %d)\n", k, v);
+	mcc_hash_map_iter_init(map, &iter);
+	srand(time(NULL));
+	for (struct mcc_kv_pair pair; mcc_hash_map_iter_next(&iter, &pair);) {
+		tmp = *(struct mcc_vector **)pair.value;
+		mcc_vector_push(tmp, &(int){rand() % 100});
+		mcc_vector_push(tmp, &(int){rand() % 100});
+		mcc_vector_push(tmp, &(int){rand() % 100});
+		mcc_vector_push(tmp, &(int){rand() % 100});
+		mcc_vector_push(tmp, &(int){rand() % 100});
 	}
 
-	h2 = mcc_hash_map_new(MCC_OBJECT_CREATE(char *, str_key_dtor),
-			      MCC_OBJECT(fruit), str_key_hash, str_key_eq);
+	mcc_hash_map_iter_init(map, &iter);
+	for (struct mcc_kv_pair pair; mcc_hash_map_iter_next(&iter, &pair);) {
+		char *k = pair.key;
+		tmp = *(struct mcc_vector **)pair.value;
 
-	mcc_hash_map_insert(h2, &(char *){strdup("Apple")},
-			    &(struct fruit){strdup("Apple"), 0});
-	mcc_hash_map_insert(h2, &(char *){strdup("Banana")},
-			    &(struct fruit){strdup("Banana"), 0});
-	mcc_hash_map_insert(h2, &(char *){strdup("Pear")},
-			    &(struct fruit){strdup("Pear"), 0});
-	mcc_hash_map_insert(h2, &(char *){strdup("Peach")},
-			    &(struct fruit){strdup("Peach"), 0});
-	mcc_hash_map_insert(h2, &(char *){strdup("Watermelon")},
-			    &(struct fruit){strdup("Watermelon"), 0});
-	mcc_hash_map_insert(h2, &(char *){strdup("Pineapple")},
-			    &(struct fruit){strdup("Pineapple"), 0});
+		printf("%s: ", k);
 
-	mcc_hash_map_iter_init(h2, &iter);
-	for (struct fruit f; iter.next(&iter, &k, &f);) {
-		printf("(%s, {%s, %d})\n", k, f.name, f.color);
-	}
-
-	h3 = mcc_hash_map_new(MCC_OBJECT_CREATE(char *, str_key_dtor),
-			      MCC_VECTOR, str_key_hash, str_key_eq);
-
-	tmp = mcc_vector_new(MCC_BASICS(int));
-	mcc_hash_map_insert(h3, &(char *){strdup("Apple")}, &tmp);
-	tmp = mcc_vector_new(MCC_BASICS(int));
-	mcc_hash_map_insert(h3, &(char *){strdup("Banana")}, &tmp);
-	tmp = mcc_vector_new(MCC_BASICS(int));
-	mcc_hash_map_insert(h3, &(char *){strdup("Orange")}, &tmp);
-
-	mcc_hash_map_iter_init(h3, &iter);
-	for (; iter.next(&iter, &k, &tmp);) {
-		for (int i= 0; i < 5; i++)
-			mcc_vector_push(tmp, &i);
-	}
-
-	mcc_hash_map_iter_init(h3, &iter);
-	for (; iter.next(&iter, &k, &tmp);) {
-		puts(k);
-		struct mcc_vector_iter i;
-		mcc_vector_iter_init(tmp, &i);
-		for (int t; i.next(&i, &t);)
-			printf("%d ", t);
+		size_t len = mcc_vector_len(tmp);
+		for (size_t i = 0; i < len; i++) {
+			int t;
+			mcc_vector_get(tmp, i, &t);
+			printf("%2d ", t);
+		}
 		putchar('\n');
 	}
 
-	mcc_hash_map_delete(h1);
-	mcc_hash_map_delete(h2);
-	mcc_hash_map_delete(h3);
+	mcc_hash_map_delete(map);
+
+	return 0;
+}
+
+int main()
+{
+	test_str_key_int_value();
+	test_str_key_vector_value();
 	return 0;
 }
