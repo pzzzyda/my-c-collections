@@ -134,10 +134,30 @@ static int test_store_int_vector(void)
 	return 0;
 }
 
+static int test_iterator(void)
+{
+	struct mcc_vector_iter iter;
+	struct mcc_vector *v = mcc_vector_new(&mcc_i32_i);
+
+	for (int i = 0; i < 20; i++) {
+		mcc_vector_push(v, &i);
+	}
+
+	mcc_vector_iter_init(v, &iter);
+	for (int i; mcc_iter_next(&iter, &i);) {
+		printf("%d ", i);
+	}
+	putchar('\n');
+
+	mcc_vector_delete(v);
+	return 0;
+}
+
 int main(int argc, char **argv)
 {
 	test_store_int();
 	test_store_fruit();
 	test_store_int_vector();
+	test_iterator();
 	return 0;
 }
