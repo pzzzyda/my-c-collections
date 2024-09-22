@@ -1,100 +1,99 @@
-#include "mcc_object.h"
-#include <stdint.h>
+#include "core/mcc_object.h"
 #include <string.h>
 
-static int i8_cmp(const void *a, const void *b)
+static mcc_i32 i8_cmp(const void *a, const void *b)
 {
-	return *(const int8_t *)a - *(const int8_t *)b;
+	return *(const mcc_i8 *)a - *(const mcc_i8 *)b;
 }
 
-static size_t i8_hash(const void *key)
+static mcc_usize i8_hash(const void *key)
 {
-	return (size_t)(*(const int8_t *)key);
+	return (mcc_usize)(*(const mcc_i8 *)key);
 }
 
-static int u8_cmp(const void *a, const void *b)
+static mcc_i32 u8_cmp(const void *a, const void *b)
 {
-	uint8_t _a = *(const uint8_t *)a;
-	uint8_t _b = *(const uint8_t *)b;
+	mcc_u8 _a = *(const mcc_u8 *)a;
+	mcc_u8 _b = *(const mcc_u8 *)b;
 
 	return _a > _b ? 1 : (_a == _b ? 0 : -1);
 }
 
-static size_t u8_hash(const void *key)
+static mcc_usize u8_hash(const void *key)
 {
-	return (size_t)(*(const uint8_t *)key);
+	return (mcc_usize)(*(const mcc_u8 *)key);
 }
 
-static int i16_cmp(const void *a, const void *b)
+static mcc_i32 i16_cmp(const void *a, const void *b)
 {
-	return *(const int16_t *)a - *(const int16_t *)b;
+	return *(const mcc_i16 *)a - *(const mcc_i16 *)b;
 }
 
-static size_t i16_hash(const void *key)
+static mcc_usize i16_hash(const void *key)
 {
-	return (size_t)(*(const int16_t *)key);
+	return (mcc_usize)(*(const mcc_i16 *)key);
 }
 
-static int u16_cmp(const void *a, const void *b)
+static mcc_i32 u16_cmp(const void *a, const void *b)
 {
-	uint16_t _a = *(const uint16_t *)a;
-	uint16_t _b = *(const uint16_t *)b;
+	mcc_u16 _a = *(const mcc_u16 *)a;
+	mcc_u16 _b = *(const mcc_u16 *)b;
 
 	return _a > _b ? 1 : (_a == _b ? 0 : -1);
 }
 
-static size_t u16_hash(const void *key)
+static mcc_usize u16_hash(const void *key)
 {
-	return (size_t)(*(const uint16_t *)key);
+	return (mcc_usize)(*(const mcc_u16 *)key);
 }
 
-static int i32_cmp(const void *a, const void *b)
+static mcc_i32 i32_cmp(const void *a, const void *b)
 {
-	return *(const int32_t *)a - *(const int32_t *)b;
+	return *(const mcc_i32 *)a - *(const mcc_i32 *)b;
 }
 
-static size_t i32_hash(const void *key)
+static mcc_usize i32_hash(const void *key)
 {
-	return (size_t)(*(const int32_t *)key);
+	return (mcc_usize)(*(const mcc_i32 *)key);
 }
 
-static int u32_cmp(const void *a, const void *b)
+static mcc_i32 u32_cmp(const void *a, const void *b)
 {
-	uint32_t _a = *(const uint32_t *)a;
-	uint32_t _b = *(const uint32_t *)b;
+	mcc_u32 _a = *(const mcc_u32 *)a;
+	mcc_u32 _b = *(const mcc_u32 *)b;
 
 	return _a > _b ? 1 : (_a == _b ? 0 : -1);
 }
 
-static size_t u32_hash(const void *key)
+static mcc_usize u32_hash(const void *key)
 {
-	return (size_t)(*(const uint32_t *)key);
+	return (mcc_usize)(*(const mcc_u32 *)key);
 }
 
-static int i64_cmp(const void *a, const void *b)
+static mcc_i32 i64_cmp(const void *a, const void *b)
 {
-	return *(const int64_t *)a - *(const int64_t *)b;
+	return *(const mcc_i64 *)a - *(const mcc_i64 *)b;
 }
 
-static size_t i64_hash(const void *key)
+static mcc_usize i64_hash(const void *key)
 {
-	return (size_t)(*(const int64_t *)key);
+	return (mcc_usize)(*(const mcc_i64 *)key);
 }
 
-static int u64_cmp(const void *a, const void *b)
+static mcc_i32 u64_cmp(const void *a, const void *b)
 {
-	uint64_t _a = *(const uint64_t *)a;
-	uint64_t _b = *(const uint64_t *)b;
+	mcc_u64 _a = *(const mcc_u64 *)a;
+	mcc_u64 _b = *(const mcc_u64 *)b;
 
 	return _a > _b ? 1 : (_a == _b ? 0 : -1);
 }
 
-static size_t u64_hash(const void *key)
+static mcc_usize u64_hash(const void *key)
 {
-	return (size_t)(*(const uint64_t *)key);
+	return (mcc_usize)(*(const mcc_u64 *)key);
 }
 
-static int float_cmp(const void *a, const void *b)
+static mcc_i32 f32_cmp(const void *a, const void *b)
 {
 	float _a = *(const float *)a;
 	float _b = *(const float *)b;
@@ -102,12 +101,12 @@ static int float_cmp(const void *a, const void *b)
 	return _a > _b ? 1 : (_a == _b ? 0 : -1);
 }
 
-static size_t float_hash(const void *key)
+static mcc_usize f32_hash(const void *key)
 {
-	return (size_t)(*(const float *)key);
+	return (mcc_usize)(*(const float *)key);
 }
 
-static int double_cmp(const void *a, const void *b)
+static mcc_i32 f64_cmp(const void *a, const void *b)
 {
 	double _a = *(const double *)a;
 	double _b = *(const double *)b;
@@ -115,20 +114,20 @@ static int double_cmp(const void *a, const void *b)
 	return _a > _b ? 1 : (_a == _b ? 0 : -1);
 }
 
-static size_t double_hash(const void *key)
+static mcc_usize f64_hash(const void *key)
 {
-	return (size_t)(*(const double *)key);
+	return (mcc_usize)(*(const double *)key);
 }
 
-static int str_cmp(const void *a, const void *b)
+static mcc_i32 str_cmp(const void *a, const void *b)
 {
-	return strcmp(a, b);
+	return strcmp(((const mcc_str *)a)->ptr, ((const mcc_str *)a)->ptr);
 }
 
-static size_t str_hash(const void *key)
+static mcc_usize str_hash(const void *key)
 {
-	const char *c = key;
-	size_t h = 0;
+	const char *c = ((const mcc_str *)key)->ptr;
+	mcc_usize h = 0;
 
 	while (*c) {
 		h = h * 31 + *c;
@@ -138,111 +137,99 @@ static size_t str_hash(const void *key)
 	return h;
 }
 
-static int size_t_cmp(const void *a, const void *b)
+static mcc_i32 usize_cmp(const void *a, const void *b)
 {
-	size_t _a = *(const size_t *)a;
-	size_t _b = *(const size_t *)b;
+	mcc_usize _a = *(const mcc_usize *)a;
+	mcc_usize _b = *(const mcc_usize *)b;
 
 	return _a > _b ? 1 : (_a == _b ? 0 : -1);
 }
 
-static size_t size_t_hash(const void *key)
+static mcc_usize usize_hash(const void *key)
 {
-	return *(const size_t *)key;
+	return *(const mcc_usize *)key;
 }
 
 const struct mcc_object_interface mcc_i8_i = {
-	.name = "i8",
-	.size = sizeof(int8_t),
+	.size = sizeof(mcc_i8),
 	.dtor = NULL,
 	.cmp = &i8_cmp,
 	.hash = &i8_hash,
 };
 
 const struct mcc_object_interface mcc_i16_i = {
-	.name = "i16",
-	.size = sizeof(int16_t),
+	.size = sizeof(mcc_i16),
 	.dtor = NULL,
 	.cmp = &i16_cmp,
 	.hash = &i16_hash,
 };
 
 const struct mcc_object_interface mcc_i32_i = {
-	.name = "i32",
-	.size = sizeof(int32_t),
+	.size = sizeof(mcc_i32),
 	.dtor = NULL,
 	.cmp = &i32_cmp,
 	.hash = &i32_hash,
 };
 
 const struct mcc_object_interface mcc_i64_i = {
-	.name = "i64",
-	.size = sizeof(int64_t),
+	.size = sizeof(mcc_i64),
 	.dtor = NULL,
 	.cmp = &i64_cmp,
 	.hash = &i64_hash,
 };
 
 const struct mcc_object_interface mcc_u8_i = {
-	.name = "u8",
-	.size = sizeof(uint8_t),
+	.size = sizeof(mcc_u8),
 	.dtor = NULL,
 	.cmp = &u8_cmp,
 	.hash = &u8_hash,
 };
 
 const struct mcc_object_interface mcc_u16_i = {
-	.name = "u16",
-	.size = sizeof(uint16_t),
+	.size = sizeof(mcc_u16),
 	.dtor = NULL,
 	.cmp = &u16_cmp,
 	.hash = &u16_hash,
 };
 
 const struct mcc_object_interface mcc_u32_i = {
-	.name = "u32",
-	.size = sizeof(uint32_t),
+	.size = sizeof(mcc_u32),
 	.dtor = NULL,
 	.cmp = &u32_cmp,
 	.hash = &u32_hash,
 };
 
 const struct mcc_object_interface mcc_u64_i = {
-	.name = "u64",
-	.size = sizeof(uint64_t),
+	.size = sizeof(mcc_u64),
 	.dtor = NULL,
 	.cmp = &u64_cmp,
 	.hash = &u64_hash,
 };
 
-const struct mcc_object_interface mcc_float_i = {
-	.name = "float",
+const struct mcc_object_interface mcc_f32_i = {
 	.size = sizeof(float),
 	.dtor = NULL,
-	.cmp = &float_cmp,
-	.hash = &float_hash,
+	.cmp = &f32_cmp,
+	.hash = &f32_hash,
 };
 
-const struct mcc_object_interface mcc_double_i = {
-	.name = "double",
+const struct mcc_object_interface mcc_f64_i = {
 	.size = sizeof(double),
 	.dtor = NULL,
-	.cmp = &double_cmp,
-	.hash = &double_hash,
+	.cmp = &f64_cmp,
+	.hash = &f64_hash,
 };
 
 const struct mcc_object_interface mcc_str_i = {
-	.name = "str",
 	.size = sizeof(char *),
 	.dtor = NULL,
 	.cmp = &str_cmp,
 	.hash = &str_hash,
 };
 
-const struct mcc_object_interface mcc_size_t_i = {
-	.name = "size_t",
-	.size = sizeof(size_t),
+const struct mcc_object_interface mcc_usize_i = {
+	.size = sizeof(mcc_usize),
 	.dtor = NULL,
-	.cmp = &size_t_cmp,
-	.hash = &size_t_hash,
+	.cmp = &usize_cmp,
+	.hash = &usize_hash,
 };
