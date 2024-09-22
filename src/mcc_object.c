@@ -121,7 +121,7 @@ static mcc_usize f64_hash(const void *key)
 
 static mcc_i32 str_cmp(const void *a, const void *b)
 {
-	return strcmp(((const mcc_str *)a)->ptr, ((const mcc_str *)a)->ptr);
+	return strcmp(((const mcc_str *)a)->ptr, ((const mcc_str *)b)->ptr);
 }
 
 static mcc_usize str_hash(const void *key)

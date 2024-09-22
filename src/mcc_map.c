@@ -1,9 +1,8 @@
 #include "mcc_map.h"
-#include "mcc_err.h"
-#include "mcc_utils.h"
+#include <stdlib.h>
 
 struct mcc_rb_node {
-	int color;
+	mcc_i32 color;
 	struct mcc_rb_node *parent;
 	struct mcc_rb_node *left;
 	struct mcc_rb_node *right;
@@ -12,12 +11,9 @@ struct mcc_rb_node {
 
 struct mcc_map {
 	struct mcc_rb_node *root;
-	size_t len;
+	mcc_usize len;
 	struct mcc_object_interface k;
 	struct mcc_object_interface v;
-
-	bool is_str_key;
-	bool is_str_val;
 };
 
 static void mcc_map_dtor(void *self)
@@ -25,41 +21,39 @@ static void mcc_map_dtor(void *self)
 	mcc_map_delete(*(struct mcc_map **)self);
 }
 
-static int mcc_map_cmp(const void *self, const void *other)
+static mcc_i32 mcc_map_cmp(const void *self, const void *other)
 {
 	struct mcc_map *const *p1 = self;
 	struct mcc_map *const *p2 = other;
 
-	return mcc_size_t_i.cmp(&(**p1).len, &(**p2).len);
+	return mcc_usize_i.cmp(&(**p1).len, &(**p2).len);
 }
 
-static size_t mcc_map_hash(const void *self)
+static mcc_usize mcc_map_hash(const void *self)
 {
 	struct mcc_map *const *p = self;
 
-	return mcc_str_i.hash((**p).k.name) * mcc_str_i.hash((**p).v.name) *
-	       mcc_size_t_i.hash(&(**p).len);
+	return mcc_usize_i.hash(&(**p).len);
 }
 
 const struct mcc_object_interface mcc_map_i = {
-	.name = "struct mcc_map *",
 	.size = sizeof(struct mcc_map *),
 	.dtor = &mcc_map_dtor,
 	.cmp = &mcc_map_cmp,
 	.hash = &mcc_map_hash,
 };
 
-static inline bool rb_is_red(struct mcc_rb_node *node)
+static inline mcc_bool rb_is_red(struct mcc_rb_node *node)
 {
 	return !node ? false : node->color == MCC_RB_RED;
 }
 
-static inline bool rb_is_black(struct mcc_rb_node *node)
+static inline mcc_bool rb_is_black(struct mcc_rb_node *node)
 {
 	return !node ? true : node->color == MCC_RB_BLACK;
 }
 
-static inline bool rb_is_root(struct mcc_rb_node *node)
+static inline mcc_bool rb_is_root(struct mcc_rb_node *node)
 {
 	return !node ? false : node->parent == NULL;
 }
@@ -401,27 +395,15 @@ static struct mcc_rb_node *rb_node_new(const void *k, const void *v,
 	if (!self)
 		return NULL;
 
-	if (map->is_str_key) {
-		self->pair.key = strdup(k);
-		if (!self->pair.key)
-			goto handle_key_allocate_err;
-	} else {
-		self->pair.key = malloc(ki->size);
-		if (!self->pair.key)
-			goto handle_key_allocate_err;
-		memcpy(self->pair.key, k, ki->size);
-	}
+	self->pair.key = calloc(1, ki->size);
+	if (!self->pair.key)
+		goto handle_key_allocate_err;
+	memcpy(self->pair.key, k, ki->size);
 
-	if (map->is_str_val) {
-		self->pair.value = strdup(v);
-		if (!self->pair.value)
-			goto handle_value_allocate_err;
-	} else {
-		self->pair.value = malloc(vi->size);
-		if (!self->pair.value)
-			goto handle_value_allocate_err;
-		memcpy(self->pair.value, v, vi->size);
-	}
+	self->pair.value = calloc(1, vi->size);
+	if (!self->pair.value)
+		goto handle_value_allocate_err;
+	memcpy(self->pair.value, v, vi->size);
 
 	return self;
 
@@ -434,10 +416,10 @@ handle_key_allocate_err:
 	return NULL;
 }
 
-static int rb_node_delete(struct mcc_rb_node *self,
-			  const struct mcc_object_interface *ki,
-			  const struct mcc_object_interface *vi,
-			  const bool is_recursive)
+static mcc_err rb_node_delete(struct mcc_rb_node *self,
+			      const struct mcc_object_interface *ki,
+			      const struct mcc_object_interface *vi,
+			      const mcc_bool is_recursive)
 {
 	if (!self)
 		return OK;
@@ -473,8 +455,6 @@ struct mcc_map *mcc_map_new(const struct mcc_object_interface *key,
 
 	self->k = *key;
 	self->v = *value;
-	self->is_str_key = !strcmp(key->name, "char *");
-	self->is_str_val = !strcmp(value->name, "char *");
 	return self;
 }
 
@@ -497,10 +477,10 @@ void mcc_map_clear(struct mcc_map *self)
 	self->len = 0;
 }
 
-int mcc_map_insert(struct mcc_map *self, const void *key, const void *value)
+mcc_err mcc_map_insert(struct mcc_map *self, const void *key, const void *value)
 {
 	struct mcc_rb_node **curr, *parent;
-	int cmp_res;
+	mcc_i32 cmp_res;
 
 	if (!self || !value)
 		return INVALID_ARGUMENTS;
@@ -532,17 +512,17 @@ int mcc_map_insert(struct mcc_map *self, const void *key, const void *value)
 	return OK;
 }
 
-static inline void swap_key_value(struct mcc_rb_node *a, struct mcc_rb_node *b)
-{
-	struct mcc_kv_pair tmp = a->pair;
-	a->pair = b->pair;
-	b->pair = tmp;
-}
+// static inline void swap_key_value(struct mcc_rb_node *a, struct mcc_rb_node *b)
+// {
+// 	struct mcc_kv_pair tmp = a->pair;
+// 	a->pair = b->pair;
+// 	b->pair = tmp;
+// }
 
 void mcc_map_remove(struct mcc_map *self, const void *key)
 {
 	struct mcc_rb_node **curr, *tmp;
-	int cmp_res;
+	mcc_i32 cmp_res;
 
 	if (!self || !key)
 		return;
@@ -569,7 +549,7 @@ void mcc_map_remove(struct mcc_map *self, const void *key)
 		curr = &(*curr)->right;
 		while ((*curr)->left)
 			curr = &(*curr)->left;
-		swap_key_value(*curr, tmp);
+		mcc_memswap(&(*curr)->pair, &tmp->pair, sizeof(struct mcc_kv_pair));
 	}
 
 	tmp = *curr;
@@ -597,7 +577,7 @@ void mcc_map_remove(struct mcc_map *self, const void *key)
 	self->len -= 1;
 }
 
-int mcc_map_get(struct mcc_map *self, const void *key, void *value)
+mcc_err mcc_map_get(struct mcc_map *self, const void *key, void *value)
 {
 	void *ptr;
 
@@ -612,7 +592,7 @@ int mcc_map_get(struct mcc_map *self, const void *key, void *value)
 void *mcc_map_get_ptr(struct mcc_map *self, const void *key)
 {
 	struct mcc_rb_node *curr;
-	int cmp_res;
+	mcc_i32 cmp_res;
 
 	if (!self || !key)
 		return NULL;
@@ -631,56 +611,56 @@ void *mcc_map_get_ptr(struct mcc_map *self, const void *key)
 	return NULL;
 }
 
-size_t mcc_map_len(struct mcc_map *self)
+mcc_usize mcc_map_len(struct mcc_map *self)
 {
 	return !self ? 0 : self->len;
 }
 
-bool mcc_map_is_empty(struct mcc_map *self)
+mcc_bool mcc_map_is_empty(struct mcc_map *self)
 {
 	return !self ? true : self->len == 0;
 }
 
-int mcc_map_iter_init(struct mcc_map *self, struct mcc_map_iter *iter)
+mcc_err mcc_map_iter_init(struct mcc_map *self, struct mcc_map_iter *iter)
 {
 	if (!self || !iter)
 		return INVALID_ARGUMENTS;
 
-	iter->interface.next = (mcc_iter_next_f)&mcc_map_iter_next;
-	iter->curr = self->root;
-	while (iter->curr && iter->curr->left)
-		iter->curr = iter->curr->left;
+	iter->interface.next = (mcc_iterator_next_fn)&mcc_map_iter_next;
+	iter->current = self->root;
+	while (iter->current && iter->current->left)
+		iter->current = iter->current->left;
 	iter->container = self;
 	return OK;
 }
 
-bool mcc_map_iter_next(struct mcc_map_iter *iter, void *result)
+mcc_bool mcc_map_iter_next(struct mcc_map_iter *iter,
+			   struct mcc_kv_pair *result)
 {
-	struct mcc_rb_node *tmp;
-	struct mcc_rb_node *curr;
-	mcc_compare_f cmp;
+	struct mcc_rb_node *curr, *tmp;
+	mcc_compare_fn cmp;
 
-	if (!iter || !iter->curr)
+	if (!iter || !iter->current)
 		return false;
 
-	curr = iter->curr;
+	curr = iter->current;
 
 	if (result)
-		*(struct mcc_kv_pair *)result = curr->pair;
+		memcpy(result, &curr->pair, sizeof(struct mcc_kv_pair));
 
 	if (curr->right) {
 		/* Find the successor. */
 		tmp = curr->right;
 		while (tmp->left)
 			tmp = tmp->left;
-		iter->curr = tmp;
+		iter->current = tmp;
 	} else {
 		tmp = curr->parent;
 		cmp = iter->container->k.cmp;
 
 		while (tmp && cmp(tmp->pair.key, curr->pair.key) <= 0)
 			tmp = tmp->parent;
-		iter->curr = tmp;
+		iter->current = tmp;
 	}
 	return true;
 }

@@ -2,6 +2,7 @@
 #include "mcc_utils.h"
 #include "mcc_vector.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include <time.h>
 
 static int test_str_key_int_value(void)
@@ -11,35 +12,39 @@ static int test_str_key_int_value(void)
 
 	map = mcc_map_new(&mcc_str_i, &mcc_i32_i);
 
-	mcc_map_insert(map, "A", &(int){'A'});
-	mcc_map_insert(map, "E", &(int){'E'});
-	mcc_map_insert(map, "D", &(int){'D'});
-	mcc_map_insert(map, "C", &(int){'C'});
-	mcc_map_insert(map, "B", &(int){'B'});
-	mcc_map_insert(map, "F", &(int){'F'});
-	mcc_map_insert(map, "b", &(int){'b'});
-	mcc_map_insert(map, "w", &(int){'w'});
-	mcc_map_insert(map, "k", &(int){'k'});
-	mcc_map_insert(map, "Z", &(int){'Z'});
-	mcc_map_insert(map, "n", &(int){'n'});
-	mcc_map_insert(map, "O", &(int){'O'});
-	mcc_map_insert(map, "s", &(int){'s'});
-	mcc_map_insert(map, "v", &(int){'v'});
-	mcc_map_insert(map, "K", &(int){'K'});
+	mcc_map_insert(map, &(mcc_str){"A"}, &(int){'A'});
+	mcc_map_insert(map, &(mcc_str){"E"}, &(int){'E'});
+	mcc_map_insert(map, &(mcc_str){"D"}, &(int){'D'});
+	mcc_map_insert(map, &(mcc_str){"C"}, &(int){'C'});
+	mcc_map_insert(map, &(mcc_str){"B"}, &(int){'B'});
+	mcc_map_insert(map, &(mcc_str){"F"}, &(int){'F'});
+	mcc_map_insert(map, &(mcc_str){"b"}, &(int){'b'});
+	mcc_map_insert(map, &(mcc_str){"w"}, &(int){'w'});
+	mcc_map_insert(map, &(mcc_str){"k"}, &(int){'k'});
+	mcc_map_insert(map, &(mcc_str){"Z"}, &(int){'Z'});
+	mcc_map_insert(map, &(mcc_str){"n"}, &(int){'n'});
+	mcc_map_insert(map, &(mcc_str){"O"}, &(int){'O'});
+	mcc_map_insert(map, &(mcc_str){"s"}, &(int){'s'});
+	mcc_map_insert(map, &(mcc_str){"v"}, &(int){'v'});
+	mcc_map_insert(map, &(mcc_str){"K"}, &(int){'K'});
+
+	printf("len = %ld\n", mcc_map_len(map));
 
 	mcc_map_iter_init(map, &iter);
 	for (struct mcc_kv_pair pair; mcc_map_iter_next(&iter, &pair);)
-		printf("(%s, %d)\n", (char *)pair.key, *(int *)pair.value);
+		printf("(%s, %d)\n", ((mcc_str *)pair.key)->ptr,
+		       *(int *)pair.value);
 
-	mcc_map_remove(map, "C");
-	mcc_map_remove(map, "b");
-	mcc_map_remove(map, "Z");
+	mcc_map_remove(map, &(mcc_str){"C"});
+	mcc_map_remove(map, &(mcc_str){"b"});
+	mcc_map_remove(map, &(mcc_str){"Z"});
 
 	puts("Removed 'C', 'Z', 'b' ");
 
 	mcc_map_iter_init(map, &iter);
 	for (struct mcc_kv_pair pair; mcc_map_iter_next(&iter, &pair);)
-		printf("(%s, %d)\n", (char *)pair.key, *(int *)pair.value);
+		printf("(%s, %d)\n", ((mcc_str *)pair.key)->ptr,
+		       *(int *)pair.value);
 
 	mcc_map_clear(map);
 
@@ -47,7 +52,8 @@ static int test_str_key_int_value(void)
 
 	mcc_map_iter_init(map, &iter);
 	for (struct mcc_kv_pair pair; mcc_map_iter_next(&iter, &pair);)
-		printf("(%s, %d)\n", (char *)pair.key, *(int *)pair.value);
+		printf("(%s, %d)\n", ((mcc_str *)pair.key)->ptr,
+		       *(int *)pair.value);
 
 	mcc_map_delete(map);
 	return 0;
@@ -62,15 +68,15 @@ static int test_str_key_vector_value(void)
 	map = mcc_map_new(&mcc_str_i, &mcc_vector_i);
 
 	tmp = mcc_vector_new(&mcc_i32_i);
-	mcc_map_insert(map, "a021be", &tmp);
+	mcc_map_insert(map, &(mcc_str){"a021be"}, &tmp);
 	tmp = mcc_vector_new(&mcc_i32_i);
-	mcc_map_insert(map, "92b341", &tmp);
+	mcc_map_insert(map, &(mcc_str){"92b341"}, &tmp);
 	tmp = mcc_vector_new(&mcc_i32_i);
-	mcc_map_insert(map, "891b7a", &tmp);
+	mcc_map_insert(map, &(mcc_str){"891b7a"}, &tmp);
 	tmp = mcc_vector_new(&mcc_i32_i);
-	mcc_map_insert(map, "5ab362", &tmp);
+	mcc_map_insert(map, &(mcc_str){"5ab362"}, &tmp);
 	tmp = mcc_vector_new(&mcc_i32_i);
-	mcc_map_insert(map, "1bf2e0", &tmp);
+	mcc_map_insert(map, &(mcc_str){"1bf2e0"}, &tmp);
 
 	mcc_map_iter_init(map, &iter);
 	srand(time(NULL));
@@ -86,10 +92,10 @@ static int test_str_key_vector_value(void)
 	putchar('\n');
 	mcc_map_iter_init(map, &iter);
 	for (struct mcc_kv_pair pair; mcc_map_iter_next(&iter, &pair);) {
-		char *k = pair.key;
+		mcc_str *k = pair.key;
 		tmp = *(struct mcc_vector **)pair.value;
 
-		printf("%s: ", k);
+		printf("%s: ", k->ptr);
 
 		size_t len = mcc_vector_len(tmp);
 		for (size_t i = 0; i < len; i++) {
