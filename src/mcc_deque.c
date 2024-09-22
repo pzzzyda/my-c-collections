@@ -1,12 +1,12 @@
 #include "mcc_deque.h"
-#include "mcc_err.h"
 #include "mcc_utils.h"
+#include <stdlib.h>
 
 struct mcc_deque {
-	uint8_t *ptr;
-	size_t head;
-	size_t len;
-	size_t cap;
+	mcc_u8 *ptr;
+	mcc_usize head;
+	mcc_usize len;
+	mcc_usize cap;
 	struct mcc_object_interface elem;
 };
 
@@ -15,48 +15,50 @@ static void mcc_deque_dtor(void *self)
 	mcc_deque_delete(*(struct mcc_deque **)self);
 }
 
-static int mcc_deque_cmp(const void *self, const void *other)
+static mcc_i32 mcc_deque_cmp(const void *self, const void *other)
 {
 	struct mcc_deque *const *p1 = self;
 	struct mcc_deque *const *p2 = other;
 
-	return mcc_size_t_i.cmp(&(**p1).len, &(**p2).len);
+	return mcc_usize_i.cmp(&(**p1).len, &(**p2).len);
 }
 
-static size_t mcc_deque_hash(const void *self)
+static mcc_usize mcc_deque_hash(const void *self)
 {
 	struct mcc_deque *const *p = self;
 
-	return mcc_str_i.hash((**p).elem.name) * mcc_size_t_i.hash(&(**p).len);
+	return mcc_usize_i.hash(&(**p).len);
 }
 
 const struct mcc_object_interface mcc_deque_i = {
-	.name = "struct mcc_deque *",
 	.size = sizeof(struct mcc_deque *),
 	.dtor = &mcc_deque_dtor,
 	.cmp = &mcc_deque_cmp,
 	.hash = &mcc_deque_hash,
 };
 
-static inline size_t mod_idx(struct mcc_deque *self, size_t index)
+static inline mcc_usize mod_idx(struct mcc_deque *self, mcc_usize index)
 {
 	return (self->head + index) % self->cap;
 }
 
-static inline void *get_ptr(struct mcc_deque *self, size_t index)
+static inline void *get_ptr(struct mcc_deque *self, mcc_usize index)
 {
 	return self->ptr + mod_idx(self, index) * self->elem.size;
 }
 
-static inline void move_elems(struct mcc_deque *self, size_t dest, size_t src,
-			      size_t n)
+static inline void move_elems(struct mcc_deque *self, mcc_usize dest,
+			      mcc_usize src, mcc_usize n)
 {
-	memmove(self->ptr + dest * self->elem.size,
-		self->ptr + src * self->elem.size, n * self->elem.size);
+	void *p1 = self->ptr + dest * self->elem.size;
+	void *p2 = self->ptr + src * self->elem.size;
+	mcc_usize total_size = n * self->elem.size;
+
+	memmove(p1, p2, total_size);
 }
 
-static inline int insert_elem_in_the_mid(struct mcc_deque *self, size_t index,
-					 const void *value)
+static inline mcc_err insert_elem_in_the_mid(struct mcc_deque *self,
+					     mcc_usize index, const void *value)
 {
 	if (mod_idx(self, index) < mod_idx(self, self->len - 1)) {
 		/*
@@ -113,7 +115,8 @@ static inline int insert_elem_in_the_mid(struct mcc_deque *self, size_t index,
 	return OK;
 }
 
-static inline int remove_elem_in_the_mid(struct mcc_deque *self, size_t index)
+static inline mcc_err remove_elem_in_the_mid(struct mcc_deque *self,
+					     mcc_usize index)
 {
 	if (self->elem.dtor)
 		self->elem.dtor(get_ptr(self, index));
@@ -131,10 +134,10 @@ static inline int remove_elem_in_the_mid(struct mcc_deque *self, size_t index)
 	return OK;
 }
 
-static int grow(struct mcc_deque *self, size_t new_capacity)
+static mcc_err grow(struct mcc_deque *self, mcc_usize new_capacity)
 {
-	size_t diff, old_capacity;
-	uint8_t *tmp;
+	mcc_usize diff, old_capacity;
+	mcc_u8 *tmp;
 
 	if (new_capacity <= self->cap)
 		return OK;
@@ -182,7 +185,7 @@ struct mcc_deque *mcc_deque_new(const struct mcc_object_interface *element)
 	if (!self)
 		return NULL;
 
-	self->elem = *element;
+	memcpy(&self->elem, element, sizeof(self->elem));
 	return self;
 }
 
@@ -196,9 +199,9 @@ void mcc_deque_delete(struct mcc_deque *self)
 	free(self);
 }
 
-int mcc_deque_reserve(struct mcc_deque *self, size_t additional)
+mcc_err mcc_deque_reserve(struct mcc_deque *self, mcc_usize additional)
 {
-	size_t new_capacity, needs;
+	mcc_usize new_capacity, needs;
 
 	if (!self)
 		return INVALID_ARGUMENTS;
@@ -214,7 +217,7 @@ int mcc_deque_reserve(struct mcc_deque *self, size_t additional)
 	return grow(self, new_capacity);
 }
 
-int mcc_deque_push_front(struct mcc_deque *self, const void *value)
+mcc_err mcc_deque_push_front(struct mcc_deque *self, const void *value)
 {
 	if (!self || !value)
 		return INVALID_ARGUMENTS;
@@ -228,7 +231,7 @@ int mcc_deque_push_front(struct mcc_deque *self, const void *value)
 	return OK;
 }
 
-int mcc_deque_push_back(struct mcc_deque *self, const void *value)
+mcc_err mcc_deque_push_back(struct mcc_deque *self, const void *value)
 {
 	if (!self || !value)
 		return INVALID_ARGUMENTS;
@@ -266,7 +269,8 @@ void mcc_deque_pop_back(struct mcc_deque *self)
 	}
 }
 
-int mcc_deque_insert(struct mcc_deque *self, size_t index, const void *value)
+mcc_err mcc_deque_insert(struct mcc_deque *self, mcc_usize index,
+			 const void *value)
 {
 	if (!self || !value)
 		return INVALID_ARGUMENTS;
@@ -285,7 +289,7 @@ int mcc_deque_insert(struct mcc_deque *self, size_t index, const void *value)
 		return insert_elem_in_the_mid(self, index, value);
 }
 
-void mcc_deque_remove(struct mcc_deque *self, size_t index)
+void mcc_deque_remove(struct mcc_deque *self, mcc_usize index)
 {
 	if (!self || index >= self->len)
 		return;
@@ -311,7 +315,7 @@ void mcc_deque_clear(struct mcc_deque *self)
 	}
 }
 
-int mcc_deque_get(struct mcc_deque *self, size_t index, void *value)
+mcc_err mcc_deque_get(struct mcc_deque *self, mcc_usize index, void *value)
 {
 	if (!self || !value)
 		return INVALID_ARGUMENTS;
@@ -323,12 +327,12 @@ int mcc_deque_get(struct mcc_deque *self, size_t index, void *value)
 	return OK;
 }
 
-void *mcc_deque_get_ptr(struct mcc_deque *self, size_t index)
+void *mcc_deque_get_ptr(struct mcc_deque *self, mcc_usize index)
 {
 	return !self || index >= self->len ? NULL : get_ptr(self, index);
 }
 
-int mcc_deque_front(struct mcc_deque *self, void *value)
+mcc_err mcc_deque_front(struct mcc_deque *self, void *value)
 {
 	if (!self || !value)
 		return INVALID_ARGUMENTS;
@@ -345,7 +349,7 @@ void *mcc_deque_front_ptr(struct mcc_deque *self)
 	return !self || !self->len ? NULL : get_ptr(self, 0);
 }
 
-int mcc_deque_back(struct mcc_deque *self, void *value)
+mcc_err mcc_deque_back(struct mcc_deque *self, void *value)
 {
 	if (!self || !value)
 		return INVALID_ARGUMENTS;
@@ -362,22 +366,22 @@ void *mcc_deque_back_ptr(struct mcc_deque *self)
 	return !self || !self->len ? NULL : get_ptr(self, self->len - 1);
 }
 
-size_t mcc_deque_capacity(struct mcc_deque *self)
+mcc_usize mcc_deque_capacity(struct mcc_deque *self)
 {
 	return !self ? 0 : self->cap;
 }
 
-size_t mcc_deque_len(struct mcc_deque *self)
+mcc_usize mcc_deque_len(struct mcc_deque *self)
 {
 	return !self ? 0 : self->len;
 }
 
-bool mcc_deque_is_empty(struct mcc_deque *self)
+mcc_bool mcc_deque_is_empty(struct mcc_deque *self)
 {
 	return !self ? true : self->len == 0;
 }
 
-int mcc_deque_swap(struct mcc_deque *self, size_t a, size_t b)
+mcc_err mcc_deque_swap(struct mcc_deque *self, mcc_usize a, mcc_usize b)
 {
 	if (!self)
 		return INVALID_ARGUMENTS;
@@ -392,29 +396,33 @@ int mcc_deque_swap(struct mcc_deque *self, size_t a, size_t b)
 	return OK;
 }
 
-int mcc_deque_reverse(struct mcc_deque *self)
+mcc_err mcc_deque_reverse(struct mcc_deque *self)
 {
+	void *p1, *p2;
+
 	if (!self)
 		return INVALID_ARGUMENTS;
 
 	if (self->len <= 1)
 		return OK;
 
-	for (size_t i = 0, j = self->len - 1; i < j; i++, j--)
-		mcc_memswap(get_ptr(self, i), get_ptr(self, j),
-			    self->elem.size);
+	for (mcc_usize i = 0, j = self->len - 1; i < j; i++, j--) {
+		p1 = get_ptr(self, i);
+		p2 = get_ptr(self, j);
+		mcc_memswap(p1, p2, self->elem.size);
+	}
 	return OK;
 }
 
-static void quick_sort(struct mcc_deque *self, size_t low, size_t high,
-		       mcc_compare_f cmp)
+static void quick_sort(struct mcc_deque *self, mcc_usize low, mcc_usize high,
+		       mcc_compare_fn cmp)
 {
-	size_t mid = low;
+	mcc_usize mid = low;
 
 	if (low >= high)
 		return;
 
-	for (size_t i = low; i < high; i++) {
+	for (mcc_usize i = low; i < high; i++) {
 		if (cmp(get_ptr(self, i), get_ptr(self, high)) < 0)
 			mcc_deque_swap(self, i, mid++);
 	}
@@ -426,7 +434,7 @@ static void quick_sort(struct mcc_deque *self, size_t low, size_t high,
 	quick_sort(self, mid + 1, high, cmp);
 }
 
-int mcc_deque_sort(struct mcc_deque *self)
+mcc_err mcc_deque_sort(struct mcc_deque *self)
 {
 	if (!self)
 		return INVALID_ARGUMENTS;
@@ -438,24 +446,24 @@ int mcc_deque_sort(struct mcc_deque *self)
 	return OK;
 }
 
-int mcc_deque_iter_init(struct mcc_deque *self, struct mcc_deque_iter *iter)
+mcc_err mcc_deque_iter_init(struct mcc_deque *self, struct mcc_deque_iter *iter)
 {
 	if (!self || !iter)
 		return INVALID_ARGUMENTS;
 
-	iter->interface.next = (mcc_iter_next_f)&mcc_deque_iter_next;
-	iter->idx = 0;
+	iter->interface.next = (mcc_iterator_next_fn)&mcc_deque_iter_next;
+	iter->index = 0;
 	iter->container = self;
 	return OK;
 }
 
-bool mcc_deque_iter_next(struct mcc_deque_iter *iter, void *result)
+mcc_bool mcc_deque_iter_next(struct mcc_deque_iter *iter, void *result)
 {
-	if (!iter || iter->idx >= iter->container->len)
+	if (!iter || iter->index >= iter->container->len)
 		return false;
 
 	if (result)
-		mcc_deque_get(iter->container, iter->idx, result);
-	iter->idx++;
+		mcc_deque_get(iter->container, iter->index, result);
+	iter->index++;
 	return true;
 }
