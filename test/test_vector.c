@@ -20,7 +20,6 @@ static void fruit_dtor(void *ptr)
 }
 
 static const struct mcc_object_interface fruit_i = {
-	.name = "struct fruit",
 	.size = sizeof(struct fruit),
 	.dtor = &fruit_dtor,
 	.cmp = NULL,
