@@ -446,6 +446,30 @@ mcc_err mcc_deque_sort(struct mcc_deque *self)
 	return OK;
 }
 
+void *mcc_deque_binary_search(struct mcc_deque *self, const void *key)
+{
+	mcc_usize low, high, mid;
+	mcc_i32 cmp_res;
+
+	if (!self || !key || !self->len)
+		return NULL;
+
+	low = 0;
+	high = self->len - 1;
+	while (low <= high && high < self->len) {
+		mid = low + ((high - low) >> 1);
+		cmp_res = self->elem.cmp(key, get_ptr(self, mid));
+		if (cmp_res > 0)
+			low = mid + 1;
+		else if (cmp_res < 0)
+			high = mid - 1;
+		else
+			return get_ptr(self, mid);
+	}
+
+	return NULL;
+}
+
 mcc_err mcc_deque_iter_init(struct mcc_deque *self, struct mcc_deque_iter *iter)
 {
 	if (!self || !iter)

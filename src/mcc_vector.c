@@ -306,6 +306,15 @@ mcc_err mcc_vector_sort(struct mcc_vector *self)
 	return OK;
 }
 
+void *mcc_vector_binary_search(struct mcc_vector *self, const void *key)
+{
+	if (!self || !key || !self->len)
+		return NULL;
+	else
+		return bsearch(key, self->ptr, self->len, self->elem.size,
+			       self->elem.cmp);
+}
+
 mcc_err mcc_vector_iter_init(struct mcc_vector *self,
 			     struct mcc_vector_iter *iter)
 {

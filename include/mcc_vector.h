@@ -56,6 +56,8 @@ mcc_err mcc_vector_reverse(struct mcc_vector *self);
 
 mcc_err mcc_vector_sort(struct mcc_vector *self);
 
+void *mcc_vector_binary_search(struct mcc_vector *self, const void *key);
+
 mcc_err mcc_vector_iter_init(struct mcc_vector *self,
 			     struct mcc_vector_iter *iter);
 

@@ -58,6 +58,8 @@ mcc_err mcc_deque_reverse(struct mcc_deque *self);
 
 mcc_err mcc_deque_sort(struct mcc_deque *self);
 
+void *mcc_deque_binary_search(struct mcc_deque *self, const void *key);
+
 mcc_err mcc_deque_iter_init(struct mcc_deque *self,
 			    struct mcc_deque_iter *iter);
 

@@ -160,11 +160,41 @@ static int test_store_int_deque(void)
 	return 0;
 }
 
+static int test_binary_search()
+{
+	struct mcc_deque *d;
+	mcc_i32 n = 20;
+	mcc_i32 i = 0;
+	mcc_i32 *v;
+
+	d = mcc_deque_new(&mcc_i32_i);
+
+	for (; i < n / 2; i++) {
+		mcc_deque_push_back(d, &i);
+	}
+	for (; i < n; i++) {
+		mcc_deque_push_front(d, &i);
+	}
+
+	mcc_deque_sort(d);
+
+	for (mcc_i32 j = 0; j < n; j++) {
+		if (!(v = mcc_deque_binary_search(d, &j)))
+			printf("No %d\n", j);
+		else
+			printf("%d\n", *v);
+	}
+
+	mcc_deque_delete(d);
+	return 0;
+}
+
 int main(int argc, char **argv)
 {
 	test_store_int();
 	test_store_fruit();
 	test_sort_int_deque();
 	test_store_int_deque();
+	test_binary_search();
 	return 0;
 }
