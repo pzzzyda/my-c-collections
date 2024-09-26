@@ -26,10 +26,21 @@ static const struct mcc_object_interface fruit_i = {
 	.hash = NULL,
 };
 
+static void print_int_list(struct mcc_list *l)
+{
+	struct mcc_list_iter iter;
+	int value;
+
+	mcc_list_iter_init(l, &iter);
+	while (mcc_iter_next(&iter, &value)) {
+		printf("%d ", value);
+	}
+	putchar('\n');
+}
+
 static int test_store_int(void)
 {
 	struct mcc_list *l;
-	struct mcc_list_iter iter;
 
 	l = mcc_list_new(&mcc_i32_i);
 
@@ -42,28 +53,40 @@ static int test_store_int(void)
 	mcc_list_push_front(l, &(int){2});
 	mcc_list_push_front(l, &(int){3});
 
-	mcc_list_iter_init(l, &iter);
-	for (int i; mcc_list_iter_next(&iter, &i); i++)
-		printf("%d ", i);
-	putchar('\n');
+	puts("Raw data:");
+	print_int_list(l);
 
-	mcc_list_insert(l, 3, &(int){30});
-	mcc_list_iter_init(l, &iter);
-	for (int i; mcc_list_iter_next(&iter, &i); i++)
-		printf("%d ", i);
-	putchar('\n');
+	puts("Insert 100 at 7:");
+	mcc_list_insert(l, 7, &(int){100});
+	print_int_list(l);
 
+	puts("Insert 100 at 1:");
+	mcc_list_insert(l, 1, &(int){100});
+	print_int_list(l);
+
+	puts("Insert 100 at 3:");
+	mcc_list_insert(l, 3, &(int){100});
+	print_int_list(l);
+
+	puts("Remove element at 5:");
 	mcc_list_remove(l, 5);
-	mcc_list_iter_init(l, &iter);
-	for (int i; mcc_list_iter_next(&iter, &i); i++)
-		printf("%d ", i);
-	putchar('\n');
+	print_int_list(l);
 
-	mcc_list_insert(l, 2, &(int){20});
-	mcc_list_iter_init(l, &iter);
-	for (int i; mcc_list_iter_next(&iter, &i); i++)
-		printf("%d ", i);
-	putchar('\n');
+	puts("Insert 100 at the end:");
+	mcc_list_insert(l, mcc_list_len(l), &(int){100});
+	print_int_list(l);
+
+	puts("Insert 100 in the head:");
+	mcc_list_insert(l, 0, &(int){100});
+	print_int_list(l);
+
+	puts("Insert 100 at 2:");
+	mcc_list_insert(l, 2, &(int){100});
+	print_int_list(l);
+
+	puts("Remove element at 1:");
+	mcc_list_remove(l, 1);
+	print_int_list(l);
 
 	mcc_list_delete(l);
 

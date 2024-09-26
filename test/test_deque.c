@@ -189,6 +189,48 @@ static int test_binary_search()
 	return 0;
 }
 
+static int test_insert_and_remove()
+{
+	struct mcc_deque *d;
+
+	d = mcc_deque_new(&mcc_i32_i);
+
+	mcc_deque_push_back(d, &(int){0});
+	mcc_deque_push_back(d, &(int){1});
+	mcc_deque_push_back(d, &(int){2});
+	mcc_deque_push_back(d, &(int){3});
+	mcc_deque_push_front(d, &(int){0});
+	mcc_deque_push_front(d, &(int){1});
+	mcc_deque_push_front(d, &(int){2});
+	mcc_deque_push_front(d, &(int){3});
+	print_int_deque(d, "Raw data:\n");
+
+	mcc_deque_insert(d, 7, &(int){100});
+	print_int_deque(d, "Insert 100 at 7:\n");
+
+	mcc_deque_insert(d, 0, &(int){100});
+	print_int_deque(d, "Insert 100 at 0:\n");
+
+	mcc_deque_remove(d, 5);
+	print_int_deque(d, "Remove element at 5:\n");
+
+	mcc_deque_insert(d, 2, &(int){100});
+	print_int_deque(d, "Insert 100 at 2:\n");
+
+	mcc_deque_remove(d, 1);
+	print_int_deque(d, "Remove element at 1:\n");
+
+	mcc_deque_insert(d, mcc_deque_len(d), &(int){100});
+	print_int_deque(d, "Insert 100 at the end:\n");
+
+	mcc_deque_insert(d, 1, &(int){100});
+	print_int_deque(d, "Insert 100 at 1:\n");
+
+	mcc_deque_delete(d);
+
+	return 0;
+}
+
 int main(int argc, char **argv)
 {
 	test_store_int();
@@ -196,5 +238,6 @@ int main(int argc, char **argv)
 	test_sort_int_deque();
 	test_store_int_deque();
 	test_binary_search();
+	test_insert_and_remove();
 	return 0;
 }

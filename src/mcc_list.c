@@ -77,18 +77,19 @@ static void node_delete(struct mcc_list_node *self,
 	free(self);
 }
 
-static inline mcc_err insert_elem_in_the_mid(struct mcc_list *self,
-					     mcc_usize index, const void *value)
+static inline mcc_err insert(struct mcc_list *self, mcc_usize index,
+			     const void *value)
 {
 	struct mcc_list_node *curr, *new_node;
+	mcc_usize i;
 
 	if (index <= self->len >> 1) {
 		curr = self->head;
-		for (mcc_usize i = 0; i < index; i++)
+		for (i = 0; i < index; i++)
 			curr = curr->next;
 	} else {
 		curr = self->tail;
-		for (mcc_usize i = self->len - 1; i > index; i--)
+		for (i = self->len - 1; i > index; i--)
 			curr = curr->prev;
 	}
 
@@ -104,18 +105,18 @@ static inline mcc_err insert_elem_in_the_mid(struct mcc_list *self,
 	return OK;
 }
 
-static inline void remove_elem_in_the_mid(struct mcc_list *self,
-					  mcc_usize index)
+static inline void remove(struct mcc_list *self, mcc_usize index)
 {
 	struct mcc_list_node *curr;
+	mcc_usize i;
 
 	if (index <= self->len >> 1) {
 		curr = self->head;
-		for (mcc_usize i = 0; i < index; i++)
+		for (i = 0; i < index; i++)
 			curr = curr->next;
 	} else {
 		curr = self->tail;
-		for (mcc_usize i = self->len - 1; i > index; i--)
+		for (i = self->len - 1; i > index; i--)
 			curr = curr->prev;
 	}
 
@@ -243,15 +244,15 @@ mcc_err mcc_list_insert(struct mcc_list *self, mcc_usize index,
 	if (!self || !value)
 		return INVALID_ARGUMENTS;
 
-	if (index && index >= self->len)
+	if (index > self->len)
 		return OUT_OF_RANGE;
 
 	if (index == 0)
 		return mcc_list_push_front(self, value);
-	else if (index == self->len - 1)
+	else if (index == self->len)
 		return mcc_list_push_back(self, value);
 	else
-		return insert_elem_in_the_mid(self, index, value);
+		return insert(self, index, value);
 }
 
 void mcc_list_remove(struct mcc_list *self, mcc_usize index)
@@ -264,7 +265,7 @@ void mcc_list_remove(struct mcc_list *self, mcc_usize index)
 	else if (index == self->len - 1)
 		mcc_list_pop_back(self);
 	else
-		remove_elem_in_the_mid(self, index);
+		remove(self, index);
 }
 
 void mcc_list_clear(struct mcc_list *self)

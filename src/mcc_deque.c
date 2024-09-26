@@ -57,10 +57,10 @@ static inline void move_elems(struct mcc_deque *self, mcc_usize dest,
 	memmove(p1, p2, total_size);
 }
 
-static inline mcc_err insert_elem_in_the_mid(struct mcc_deque *self,
-					     mcc_usize index, const void *value)
+static inline mcc_err insert(struct mcc_deque *self, mcc_usize index,
+			     const void *value)
 {
-	if (mod_idx(self, index) < mod_idx(self, self->len - 1)) {
+	if (mod_idx(self, index) <= mod_idx(self, self->len - 1)) {
 		/*
 		 * Case 1:
 		 *
@@ -115,8 +115,7 @@ static inline mcc_err insert_elem_in_the_mid(struct mcc_deque *self,
 	return OK;
 }
 
-static inline mcc_err remove_elem_in_the_mid(struct mcc_deque *self,
-					     mcc_usize index)
+static inline mcc_err remove(struct mcc_deque *self, mcc_usize index)
 {
 	if (self->elem.dtor)
 		self->elem.dtor(get_ptr(self, index));
@@ -275,7 +274,7 @@ mcc_err mcc_deque_insert(struct mcc_deque *self, mcc_usize index,
 	if (!self || !value)
 		return INVALID_ARGUMENTS;
 
-	if (index && index >= self->len)
+	if (index > self->len)
 		return OUT_OF_RANGE;
 
 	if (self->len >= self->cap && mcc_deque_reserve(self, 1) != OK)
@@ -283,10 +282,10 @@ mcc_err mcc_deque_insert(struct mcc_deque *self, mcc_usize index,
 
 	if (index == 0)
 		return mcc_deque_push_front(self, value);
-	else if (index == self->len - 1)
+	else if (index == self->len)
 		return mcc_deque_push_back(self, value);
 	else
-		return insert_elem_in_the_mid(self, index, value);
+		return insert(self, index, value);
 }
 
 void mcc_deque_remove(struct mcc_deque *self, mcc_usize index)
@@ -299,7 +298,7 @@ void mcc_deque_remove(struct mcc_deque *self, mcc_usize index)
 	else if (index == self->len - 1)
 		mcc_deque_pop_back(self);
 	else
-		remove_elem_in_the_mid(self, index);
+		remove(self, index);
 }
 
 void mcc_deque_clear(struct mcc_deque *self)

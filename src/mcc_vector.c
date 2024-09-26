@@ -155,13 +155,13 @@ mcc_err mcc_vector_insert(struct mcc_vector *self, mcc_usize index,
 	if (!self || !value)
 		return INVALID_ARGUMENTS;
 
-	if (index && index >= self->len)
+	if (index > self->len)
 		return OUT_OF_RANGE;
 
 	if (self->len >= self->cap && mcc_vector_reserve(self, 1) != OK)
 		return CANNOT_ALLOCATE_MEMORY;
 
-	if (!index || index == self->len - 1) {
+	if (index == self->len) {
 		return mcc_vector_push(self, value);
 	} else {
 		move_elems(self, index + 1, index, self->len - index);
@@ -176,10 +176,14 @@ void mcc_vector_remove(struct mcc_vector *self, mcc_usize index)
 	if (!self || index >= self->len)
 		return;
 
-	if (self->elem.dtor)
-		self->elem.dtor(get_ptr(self, index));
-	move_elems(self, index, index + 1, self->len - index - 1);
-	self->len--;
+	if (index == self->len - 1) {
+		mcc_vector_pop(self);
+	} else {
+		if (self->elem.dtor)
+			self->elem.dtor(get_ptr(self, index));
+		move_elems(self, index, index + 1, self->len - index - 1);
+		self->len--;
+	}
 }
 
 void mcc_vector_clear(struct mcc_vector *self)
