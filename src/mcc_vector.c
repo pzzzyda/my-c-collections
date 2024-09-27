@@ -1,12 +1,10 @@
 #include "mcc_vector.h"
-#include "mcc_utils.h"
+#include "base/mcc_array.h"
 #include <stdlib.h>
 
 struct mcc_vector {
-	mcc_u8 *ptr;
+	struct mcc_array *buf;
 	mcc_usize len;
-	mcc_usize cap;
-	struct mcc_object_interface elem;
 };
 
 static void mcc_vector_dtor(void *self)
@@ -36,33 +34,20 @@ const struct mcc_object_interface mcc_vector_i = {
 	.hash = &mcc_vector_hash,
 };
 
-static inline void *get_ptr(struct mcc_vector *self, mcc_usize index)
-{
-	return self->ptr + index * self->elem.size;
-}
-
-static inline void move_elems(struct mcc_vector *self, mcc_usize dest,
-			      mcc_usize src, mcc_usize n)
-{
-	void *p1 = get_ptr(self, dest);
-	void *p2 = get_ptr(self, src);
-	mcc_usize total_size = n * self->elem.size;
-
-	memmove(p1, p2, total_size);
-}
-
 struct mcc_vector *mcc_vector_new(const struct mcc_object_interface *element)
 {
 	struct mcc_vector *self;
-
-	if (!element)
-		return NULL;
 
 	self = calloc(1, sizeof(struct mcc_vector));
 	if (!self)
 		return NULL;
 
-	memcpy(&self->elem, element, sizeof(self->elem));
+	self->buf = mcc_array_new(element, 0);
+	if (!self->buf) {
+		free(self);
+		return NULL;
+	}
+
 	return self;
 }
 
@@ -72,55 +57,37 @@ void mcc_vector_delete(struct mcc_vector *self)
 		return;
 
 	mcc_vector_clear(self);
-	free(self->ptr);
+	mcc_array_delete(self->buf);
 	free(self);
 }
 
 mcc_err mcc_vector_reserve(struct mcc_vector *self, mcc_usize additional)
 {
-	mcc_usize new_capacity, needs;
-	mcc_u8 *tmp;
+	struct mcc_array *new_buf;
 
 	if (!self)
 		return INVALID_ARGUMENTS;
 
-	needs = self->len + additional;
-	if (needs <= self->cap)
-		return OK;
-
-	new_capacity = !self->cap ? 4 : self->cap << 1;
-	while (new_capacity < needs)
-		new_capacity <<= 1;
-
-	tmp = realloc(self->ptr, new_capacity * self->elem.size);
-	if (!tmp)
+	new_buf = mcc_array_reserve(self->buf, additional);
+	if (!new_buf)
 		return CANNOT_ALLOCATE_MEMORY;
 
-	self->ptr = tmp;
-	self->cap = new_capacity;
+	self->buf = new_buf;
 	return OK;
 }
 
 mcc_err mcc_vector_shrink_to_fit(struct mcc_vector *self)
 {
-	mcc_u8 *tmp;
+	struct mcc_array *new_buf;
 
 	if (!self)
 		return INVALID_ARGUMENTS;
 
-	if (!self->len) {
-		free(self->ptr);
-		self->ptr = NULL;
-		self->cap = 0;
-		return OK;
-	}
-
-	tmp = realloc(self->ptr, self->len * self->elem.size);
-	if (!tmp)
+	new_buf = mcc_array_shrink(self->buf, self->len);
+	if (!new_buf)
 		return CANNOT_ALLOCATE_MEMORY;
 
-	self->ptr = tmp;
-	self->cap = self->len;
+	self->buf = new_buf;
 	return OK;
 }
 
@@ -129,71 +96,83 @@ mcc_err mcc_vector_push(struct mcc_vector *self, const void *value)
 	if (!self || !value)
 		return INVALID_ARGUMENTS;
 
-	if (self->len >= self->cap && mcc_vector_reserve(self, 1) != OK)
-		return CANNOT_ALLOCATE_MEMORY;
+	if (self->len >= self->buf->cap) {
+		if (mcc_vector_reserve(self, 1) != OK)
+			return CANNOT_ALLOCATE_MEMORY;
+	}
 
-	memcpy(get_ptr(self, self->len), value, self->elem.size);
+	mcc_array_set(self->buf, self->len, value);
 	self->len++;
 	return OK;
 }
 
 void mcc_vector_pop(struct mcc_vector *self)
 {
-	if (!self)
+	if (!self || !self->len)
 		return;
 
-	if (self->len) {
-		if (self->elem.dtor)
-			self->elem.dtor(get_ptr(self, self->len - 1));
-		self->len--;
-	}
+	if (self->buf->T->dtor)
+		self->buf->T->dtor(mcc_vector_back_ptr(self));
+	self->len--;
 }
 
 mcc_err mcc_vector_insert(struct mcc_vector *self, mcc_usize index,
 			  const void *value)
 {
+	mcc_usize n;
+
 	if (!self || !value)
 		return INVALID_ARGUMENTS;
 
 	if (index > self->len)
 		return OUT_OF_RANGE;
 
-	if (self->len >= self->cap && mcc_vector_reserve(self, 1) != OK)
-		return CANNOT_ALLOCATE_MEMORY;
-
-	if (index == self->len) {
+	if (index == self->len)
 		return mcc_vector_push(self, value);
-	} else {
-		move_elems(self, index + 1, index, self->len - index);
-		memcpy(get_ptr(self, index), value, self->elem.size);
-		self->len++;
-		return OK;
+
+	if (self->len >= self->buf->cap) {
+		if (mcc_vector_reserve(self, 1) != OK)
+			return CANNOT_ALLOCATE_MEMORY;
 	}
+
+	n = self->len - index;
+	mcc_array_move(self->buf, index + 1, index, n);
+	mcc_array_set(self->buf, index, value);
+	self->len++;
+	return OK;
 }
 
 void mcc_vector_remove(struct mcc_vector *self, mcc_usize index)
 {
+	mcc_usize n;
+
 	if (!self || index >= self->len)
 		return;
 
 	if (index == self->len - 1) {
 		mcc_vector_pop(self);
-	} else {
-		if (self->elem.dtor)
-			self->elem.dtor(get_ptr(self, index));
-		move_elems(self, index, index + 1, self->len - index - 1);
-		self->len--;
+		return;
 	}
+
+	if (self->buf->T->dtor)
+		self->buf->T->dtor(mcc_array_at(self->buf, index));
+	n = self->len - index - 1;
+	mcc_array_move(self->buf, index, index + 1, n);
+	self->len--;
 }
 
 void mcc_vector_clear(struct mcc_vector *self)
 {
-	if (!self)
+	void *tmp;
+
+	if (!self || !self->len)
 		return;
 
-	if (self->elem.dtor) {
-		while (self->len)
-			self->elem.dtor(get_ptr(self, --self->len));
+	if (self->buf->T->dtor) {
+		while (self->len) {
+			tmp = mcc_array_at(self->buf, --self->len);
+			self->buf->T->dtor(tmp);
+		}
 	} else {
 		self->len = 0;
 	}
@@ -207,13 +186,16 @@ mcc_err mcc_vector_get(struct mcc_vector *self, mcc_usize index, void *value)
 	if (index >= self->len)
 		return OUT_OF_RANGE;
 
-	memcpy(value, get_ptr(self, index), self->elem.size);
+	mcc_array_get(self->buf, index, value);
 	return OK;
 }
 
 void *mcc_vector_get_ptr(struct mcc_vector *self, mcc_usize index)
 {
-	return !self || index >= self->len ? NULL : get_ptr(self, index);
+	if (!self || index >= self->len)
+		return NULL;
+	else
+		return mcc_array_at(self->buf, index);
 }
 
 mcc_err mcc_vector_front(struct mcc_vector *self, void *value)
@@ -224,13 +206,16 @@ mcc_err mcc_vector_front(struct mcc_vector *self, void *value)
 	if (!self->len)
 		return NONE;
 
-	memcpy(value, get_ptr(self, 0), self->elem.size);
+	mcc_array_get(self->buf, 0, value);
 	return OK;
 }
 
 void *mcc_vector_front_ptr(struct mcc_vector *self)
 {
-	return !self || !self->len ? NULL : get_ptr(self, 0);
+	if (!self || !self->len)
+		return NULL;
+	else
+		return mcc_array_at(self->buf, 0);
 }
 
 mcc_err mcc_vector_back(struct mcc_vector *self, void *value)
@@ -241,18 +226,21 @@ mcc_err mcc_vector_back(struct mcc_vector *self, void *value)
 	if (!self->len)
 		return NONE;
 
-	memcpy(value, get_ptr(self, self->len - 1), self->elem.size);
+	mcc_array_get(self->buf, self->len - 1, value);
 	return OK;
 }
 
 void *mcc_vector_back_ptr(struct mcc_vector *self)
 {
-	return !self || !self->len ? NULL : get_ptr(self, self->len - 1);
+	if (!self || !self->len)
+		return NULL;
+	else
+		return mcc_array_at(self->buf, self->len - 1);
 }
 
 mcc_usize mcc_vector_capacity(struct mcc_vector *self)
 {
-	return !self ? 0 : self->cap;
+	return !self ? 0 : self->buf->cap;
 }
 
 mcc_usize mcc_vector_len(struct mcc_vector *self)
@@ -276,13 +264,13 @@ mcc_err mcc_vector_swap(struct mcc_vector *self, mcc_usize a, mcc_usize b)
 	if (a == b)
 		return OK;
 
-	mcc_memswap(get_ptr(self, a), get_ptr(self, b), self->elem.size);
+	mcc_array_swap(self->buf, a, b);
 	return OK;
 }
 
 mcc_err mcc_vector_reverse(struct mcc_vector *self)
 {
-	void *p1, *p2;
+	mcc_usize i, j;
 
 	if (!self)
 		return INVALID_ARGUMENTS;
@@ -290,11 +278,8 @@ mcc_err mcc_vector_reverse(struct mcc_vector *self)
 	if (self->len <= 1)
 		return OK;
 
-	for (mcc_usize i = 0, j = self->len - 1; i < j; i++, j--) {
-		p1 = get_ptr(self, i);
-		p2 = get_ptr(self, j);
-		mcc_memswap(p1, p2, self->elem.size);
-	}
+	for (i = 0, j = self->len - 1; i < j; i++, j--)
+		mcc_array_swap(self->buf, i, j);
 	return OK;
 }
 
@@ -306,7 +291,8 @@ mcc_err mcc_vector_sort(struct mcc_vector *self)
 	if (self->len <= 1)
 		return OK;
 
-	qsort(self->ptr, self->len, self->elem.size, self->elem.cmp);
+	qsort(mcc_array_ptr(self->buf), self->len, self->buf->T->size,
+	      self->buf->T->cmp);
 	return OK;
 }
 
@@ -315,8 +301,8 @@ void *mcc_vector_binary_search(struct mcc_vector *self, const void *key)
 	if (!self || !key || !self->len)
 		return NULL;
 	else
-		return bsearch(key, self->ptr, self->len, self->elem.size,
-			       self->elem.cmp);
+		return bsearch(key, mcc_array_ptr(self->buf), self->len,
+			       self->buf->T->size, self->buf->T->cmp);
 }
 
 mcc_err mcc_vector_iter_init(struct mcc_vector *self,

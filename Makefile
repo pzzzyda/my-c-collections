@@ -77,6 +77,7 @@ test_%: ./build/unit_test/test_%.out
 	@$(CC) $^ -o $@
 
 ./build/unit_test/test_vector.out: ./build/unit_test/test_vector.o \
-./build/unit_test/mcc_object.o ./build/unit_test/mcc_vector.o
+./build/unit_test/mcc_object.o ./build/unit_test/mcc_vector.o \
+./build/unit_test/mcc_array.o
 	@mkdir -p $(dir $@)
 	@$(CC) $^ -o $@
