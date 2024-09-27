@@ -30,6 +30,6 @@ extern const struct mcc_object_interface mcc_vector_i;
 extern const struct mcc_object_interface mcc_deque_i;
 extern const struct mcc_object_interface mcc_list_i;
 extern const struct mcc_object_interface mcc_hash_map_i;
-extern const struct mcc_object_interface mcc_map_i;
+extern const struct mcc_object_interface mcc_rb_map_i;
 
 #endif /* _MCC_OBJECT_H */

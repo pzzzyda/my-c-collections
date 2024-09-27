@@ -70,9 +70,9 @@ test_%: ./build/unit_test/test_%.out
 	@mkdir -p $(dir $@)
 	@$(CC) $^ -o $@
 
-./build/unit_test/test_map.out: ./build/unit_test/test_map.o \
+./build/unit_test/test_rb_map.out: ./build/unit_test/test_rb_map.o \
 ./build/unit_test/mcc_vector.o ./build/unit_test/mcc_object.o \
-./build/unit_test/mcc_map.o
+./build/unit_test/mcc_rb_map.o ./build/unit_test/mcc_array.o
 	@mkdir -p $(dir $@)
 	@$(CC) $^ -o $@
 
