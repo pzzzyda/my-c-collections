@@ -55,7 +55,8 @@ test_%: ./build/unit_test/test_%.out
 	@$<
 
 ./build/unit_test/test_deque.out: ./build/unit_test/test_deque.o \
-./build/unit_test/mcc_object.o ./build/unit_test/mcc_deque.o
+./build/unit_test/mcc_object.o ./build/unit_test/mcc_deque.o \
+./build/unit_test/mcc_array.o
 	@mkdir -p $(dir $@)
 	@$(CC) $^ -o $@
 
