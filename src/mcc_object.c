@@ -121,12 +121,12 @@ static mcc_usize f64_hash(const void *key)
 
 static mcc_i32 str_cmp(const void *a, const void *b)
 {
-	return strcmp(((const mcc_str *)a)->ptr, ((const mcc_str *)b)->ptr);
+	return strcmp(*((const mcc_str *)a), *((const mcc_str *)b));
 }
 
 static mcc_usize str_hash(const void *key)
 {
-	const char *c = ((const mcc_str *)key)->ptr;
+	const char *c = *((const mcc_str *)key);
 	mcc_usize h = 0;
 
 	while (*c) {

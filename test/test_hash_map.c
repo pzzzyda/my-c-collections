@@ -12,22 +12,41 @@ static int test_str_key_int_value(void)
 
 	map = mcc_hash_map_new(&mcc_str_i, &mcc_i32_i);
 
-	mcc_hash_map_insert(map, &(mcc_str){"89ba21"}, &(int){0});
-	mcc_hash_map_insert(map, &(mcc_str){"b412ca"}, &(int){1});
-	mcc_hash_map_insert(map, &(mcc_str){"b9ac44"}, &(int){2});
-	mcc_hash_map_insert(map, &(mcc_str){"43aa43"}, &(int){3});
-	mcc_hash_map_insert(map, &(mcc_str){"13ba1d"}, &(int){4});
-	mcc_hash_map_insert(map, &(mcc_str){"7531ba"}, &(int){5});
-	mcc_hash_map_insert(map, &(mcc_str){"21ce90"}, &(int){6});
-	mcc_hash_map_insert(map, &(mcc_str){"5421ba"}, &(int){7});
-	mcc_hash_map_insert(map, &(mcc_str){"af231e"}, &(int){8});
-	mcc_hash_map_insert(map, &(mcc_str){"d1b53a"}, &(int){9});
+	mcc_hash_map_insert(map, &(mcc_str){"Apple"}, &(int){0});
+	mcc_hash_map_insert(map, &(mcc_str){"Banana"}, &(int){1});
+	mcc_hash_map_insert(map, &(mcc_str){"Orange"}, &(int){2});
+	mcc_hash_map_insert(map, &(mcc_str){"Raspberry"}, &(int){3});
+	mcc_hash_map_insert(map, &(mcc_str){"Pear"}, &(int){4});
+	mcc_hash_map_insert(map, &(mcc_str){"Watermelon"}, &(int){5});
+	mcc_hash_map_insert(map, &(mcc_str){"Coconut"}, &(int){6});
+	mcc_hash_map_insert(map, &(mcc_str){"Pineapple"}, &(int){7});
+	mcc_hash_map_insert(map, &(mcc_str){"Strawberry"}, &(int){8});
+	mcc_hash_map_insert(map, &(mcc_str){"Grape"}, &(int){9});
 
-	mcc_hash_map_remove(map, &(mcc_str){"b9ac44"});
+	puts("Raw data");
+	mcc_hash_map_iter_init(map, &iter);
+	for (struct mcc_kv_pair pair; mcc_hash_map_iter_next(&iter, &pair);) {
+		mcc_str *k = pair.key;
+		int *v = pair.value;
+		printf("(%s, %d)\n", *k, *v);
+	}
+	putchar('\n');
+
+	puts("Removed Pineapple");
+	mcc_hash_map_remove(map, &(mcc_str){"Pineapple"});
+
+	puts("Removed Pear");
+	mcc_hash_map_remove(map, &(mcc_str){"Pear"});
+
+	puts("Update the value of Apple to 100");
+	mcc_hash_map_insert(map, &(mcc_str){"Apple"}, &(int){100});
 
 	mcc_hash_map_iter_init(map, &iter);
-	for (struct mcc_kv_pair pair; mcc_hash_map_iter_next(&iter, &pair);)
-		printf("(%s, %d)\n", ((mcc_str *)pair.key)->ptr, *(int *)pair.value);
+	for (struct mcc_kv_pair pair; mcc_hash_map_iter_next(&iter, &pair);) {
+		mcc_str *k = pair.key;
+		int *v = pair.value;
+		printf("(%s, %d)\n", *k, *v);
+	}
 	putchar('\n');
 
 	mcc_hash_map_delete(map);
@@ -70,7 +89,7 @@ static int test_str_key_vector_value(void)
 		mcc_str *k = pair.key;
 		tmp = *(struct mcc_vector **)pair.value;
 
-		printf("%s: ", k->ptr);
+		printf("%s: ", *k);
 
 		size_t len = mcc_vector_len(tmp);
 		for (size_t i = 0; i < len; i++) {

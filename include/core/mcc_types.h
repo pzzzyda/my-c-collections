@@ -18,8 +18,6 @@ typedef double mcc_f64;
 typedef size_t mcc_usize;
 typedef bool mcc_bool;
 
-typedef struct {
-	const char *ptr;
-} mcc_str;
+typedef const char *mcc_str;
 
 #endif /* _MCC_TYPES_H */

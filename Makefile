@@ -62,7 +62,7 @@ test_%: ./build/unit_test/test_%.out
 
 ./build/unit_test/test_hash_map.out: ./build/unit_test/test_hash_map.o \
 ./build/unit_test/mcc_object.o ./build/unit_test/mcc_vector.o \
-./build/unit_test/mcc_hash_map.o
+./build/unit_test/mcc_hash_map.o ./build/unit_test/mcc_array.o
 	@mkdir -p $(dir $@)
 	@$(CC) $^ -o $@
 

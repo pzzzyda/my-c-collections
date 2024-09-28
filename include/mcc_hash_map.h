@@ -6,19 +6,19 @@
 #include "mcc_err.h"
 #include "mcc_utils.h"
 
-struct mcc_bucket;
+struct mcc_hash_entry;
 
 struct mcc_hash_map;
 
 struct mcc_hash_map_iter {
 	struct mcc_iterator_interface interface;
 	mcc_usize index;
-	struct mcc_bucket *current;
+	struct mcc_hash_entry *current;
 	struct mcc_hash_map *container;
 };
 
-struct mcc_hash_map *mcc_hash_map_new(const struct mcc_object_interface *key,
-				      const struct mcc_object_interface *value);
+struct mcc_hash_map *mcc_hash_map_new(const struct mcc_object_interface *K,
+				      const struct mcc_object_interface *V);
 
 void mcc_hash_map_delete(struct mcc_hash_map *self);
 

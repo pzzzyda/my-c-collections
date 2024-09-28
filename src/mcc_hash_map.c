@@ -1,17 +1,25 @@
 #include "mcc_hash_map.h"
 #include <stdlib.h>
 
-struct mcc_bucket {
-	struct mcc_bucket *next;
-	struct mcc_kv_pair pair;
+struct arg_wrapper {
+	const struct mcc_object_interface *K;
+	const struct mcc_object_interface *V;
+	const void *key;
+	const void *value;
+};
+
+struct mcc_hash_entry {
+	struct mcc_hash_entry *next;
+	void *key;
 };
 
 struct mcc_hash_map {
-	struct mcc_bucket **bkts;
-	mcc_usize len;
+	const struct mcc_object_interface *K;
+	const struct mcc_object_interface *V;
+
+	struct mcc_hash_entry **buckets;
 	mcc_usize cap;
-	struct mcc_object_interface k;
-	struct mcc_object_interface v;
+	mcc_usize len;
 };
 
 static void mcc_hash_map_dtor(void *self)
@@ -41,121 +49,135 @@ const struct mcc_object_interface mcc_hash_map_i = {
 	.hash = &mcc_hash_map_hash,
 };
 
-static struct mcc_bucket *bucket_new(const void *k, const void *v,
-				     const struct mcc_hash_map *map)
+static inline void *value_of(struct mcc_hash_entry *entry)
 {
-	struct mcc_bucket *self;
-	const struct mcc_object_interface *ki = &map->k;
-	const struct mcc_object_interface *vi = &map->v;
+	return (mcc_u8 *)entry + sizeof(struct mcc_hash_entry);
+}
 
-	self = calloc(1, sizeof(struct mcc_bucket));
+static struct mcc_hash_entry *entry_new(const struct arg_wrapper *args)
+{
+	struct mcc_hash_entry *self;
+	mcc_u8 *tmp;
+
+	mcc_usize total_size = sizeof(struct mcc_hash_entry);
+	total_size += args->V->size;
+
+	self = calloc(1, total_size);
 	if (!self)
 		return NULL;
 
-	self->pair.key = calloc(1, ki->size);
-	if (!self->pair.key)
-		goto handle_key_allocate_err;
-	memcpy(self->pair.key, k, ki->size);
+	tmp = calloc(1, args->K->size);
+	if (!tmp) {
+		free(self);
+		return NULL;
+	}
+	memcpy(tmp, args->key, args->K->size);
+	self->key = tmp;
 
-	self->pair.value = calloc(1, vi->size);
-	if (!self->pair.value)
-		goto handle_value_allocate_err;
-	memcpy(self->pair.value, v, vi->size);
+	if (args->V->size) {
+		tmp = value_of(self);
+		memcpy(tmp, args->value, args->V->size);
+	}
 
 	return self;
+}
 
-handle_value_allocate_err:
-	if (ki->dtor)
-		ki->dtor(self->pair.key);
-	free(self->pair.key);
-handle_key_allocate_err:
+static void entry_delete(struct mcc_hash_entry *self,
+			 const struct mcc_object_interface *K,
+			 const struct mcc_object_interface *V)
+{
+	void *value = value_of(self);
+
+	if (K->dtor)
+		K->dtor(self->key);
+	free(self->key);
+
+	if (V->dtor)
+		V->dtor(value);
+
 	free(self);
-	return NULL;
 }
 
-static void bucket_delete(struct mcc_bucket *self,
-			  const struct mcc_object_interface *ki,
-			  const struct mcc_object_interface *vi)
+static inline void entry_update_value(struct mcc_hash_entry *self,
+				      const struct mcc_object_interface *V,
+				      const void *value)
 {
-	struct mcc_bucket *tmp;
+	void *old_value;
 
-	while (self) {
-		tmp = self->next;
+	if (!V->size)
+		return;
 
-		if (ki->dtor)
-			ki->dtor(self->pair.key);
-		free(self->pair.key);
+	old_value = value_of(self);
+	if (V->dtor)
+		V->dtor(old_value);
+	memcpy(old_value, value, V->size);
+}
 
-		if (vi->dtor)
-			vi->dtor(self->pair.value);
-		free(self->pair.value);
-
-		free(self);
-		self = tmp;
+static inline mcc_err entry_add(struct mcc_hash_entry **self,
+				const struct arg_wrapper *args)
+{
+	while (*self) {
+		if (args->K->cmp(args->key, (*self)->key) == 0) {
+			entry_update_value(*self, args->V, args->value);
+			return OK;
+		}
+		self = &(*self)->next;
 	}
+
+	*self = entry_new(args);
+	if (!*self)
+		return CANNOT_ALLOCATE_MEMORY;
+	return OK;
 }
 
-static inline mcc_usize hash_bkt(struct mcc_bucket *bkt,
-				 struct mcc_hash_map *map)
+static mcc_err rehash(struct mcc_hash_map *self, mcc_usize new_capacity)
 {
-	return map->k.hash(bkt->pair.key);
-}
+	struct mcc_hash_entry **new_buckets, *curr, *tmp;
+	mcc_usize i, index;
 
-static inline mcc_i32 cmp_key(const void *k1, const void *k2,
-			      struct mcc_hash_map *map)
-{
-	return map->k.cmp(k1, k2);
-}
-
-static mcc_err mcc_hash_map_rehash(struct mcc_hash_map *self,
-				   mcc_usize new_capacity)
-{
-	struct mcc_bucket **new_bkts, *curr, *tmp;
-	mcc_usize index;
-
-	new_bkts = calloc(new_capacity, sizeof(struct mcc_bucket *));
-	if (!new_bkts)
+	new_buckets = calloc(new_capacity, sizeof(struct mcc_hash_entry *));
+	if (!new_buckets)
 		return CANNOT_ALLOCATE_MEMORY;
 
-	for (mcc_usize i = 0; i < self->cap; i++) {
-		curr = self->bkts[i];
+	for (i = 0; i < self->cap; i++) {
+		curr = self->buckets[i];
 
 		while (curr) {
 			tmp = curr->next;
-			index = hash_bkt(curr, self) & (new_capacity - 1);
-			curr->next = new_bkts[index];
-			new_bkts[index] = curr;
+			index = self->K->hash(curr->key) & (new_capacity - 1);
+			curr->next = new_buckets[index];
+			new_buckets[index] = curr;
 			curr = tmp;
 		}
 	}
 
-	free(self->bkts);
-	self->bkts = new_bkts;
+	free(self->buckets);
+	self->buckets = new_buckets;
 	self->cap = new_capacity;
 	return OK;
 }
 
-struct mcc_hash_map *mcc_hash_map_new(const struct mcc_object_interface *key,
-				      const struct mcc_object_interface *value)
+struct mcc_hash_map *mcc_hash_map_new(const struct mcc_object_interface *K,
+				      const struct mcc_object_interface *V)
 {
 	struct mcc_hash_map *self;
 
-	if (!key || !value)
+	if (!K || !V)
 		return NULL;
 
 	self = calloc(1, sizeof(struct mcc_hash_map));
 	if (!self)
 		return NULL;
 
-	self->bkts = calloc(4, sizeof(struct mcc_bucket *));
-	if (!self->bkts) {
+	self->buckets = calloc(8, sizeof(struct mcc_hash_entry *));
+	if (!self->buckets) {
 		free(self);
 		return NULL;
 	}
 
-	self->cap = 4;
-	memcpy(&self->k, key, sizeof(self->k));
-	memcpy(&self->v, value, sizeof(self->v));
+	self->cap = 8;
+	self->K = K;
+	self->V = V;
 	return self;
 }
 
@@ -165,7 +187,7 @@ void mcc_hash_map_delete(struct mcc_hash_map *self)
 		return;
 
 	mcc_hash_map_clear(self);
-	free(self->bkts);
+	free(self->buckets);
 	free(self);
 }
 
@@ -184,32 +206,25 @@ mcc_err mcc_hash_map_reserve(struct mcc_hash_map *self, mcc_usize additional)
 	while (new_capacity < needs)
 		new_capacity <<= 1;
 
-	return mcc_hash_map_rehash(self, new_capacity);
+	return rehash(self, new_capacity);
 }
 
 mcc_err mcc_hash_map_insert(struct mcc_hash_map *self, const void *key,
 			    const void *value)
 {
 	mcc_usize index;
-	struct mcc_bucket **curr;
+	const struct arg_wrapper args = {
+		.K = self->K,
+		.V = self->V,
+		.key = key,
+		.value = value,
+	};
 
 	if (!self || !key || !value)
 		return INVALID_ARGUMENTS;
 
-	index = self->k.hash(key) & (self->cap - 1);
-	curr = &self->bkts[index];
-	while (*curr) {
-		if (cmp_key(key, (*curr)->pair.key, self) == 0) {
-			if (self->v.dtor)
-				self->v.dtor((*curr)->pair.value);
-			memcpy((*curr)->pair.value, value, self->v.size);
-			return OK;
-		}
-		curr = &(*curr)->next;
-	}
-
-	*curr = bucket_new(key, value, self);
-	if (!*curr)
+	index = self->K->hash(key) & (self->cap - 1);
+	if (entry_add(&self->buckets[index], &args) != OK)
 		return CANNOT_ALLOCATE_MEMORY;
 
 	self->len++;
@@ -223,19 +238,19 @@ mcc_err mcc_hash_map_insert(struct mcc_hash_map *self, const void *key,
 void mcc_hash_map_remove(struct mcc_hash_map *self, const void *key)
 {
 	mcc_usize index;
-	struct mcc_bucket **curr, *tmp;
+	struct mcc_hash_entry **curr, *tmp;
 
 	if (!self || !key)
 		return;
 
-	index = self->k.hash(key) & (self->cap - 1);
-	curr = &self->bkts[index];
+	index = self->K->hash(key) & (self->cap - 1);
+	curr = &self->buckets[index];
 	while (*curr) {
-		if (cmp_key(key, (*curr)->pair.key, self) == 0) {
+		if (self->K->cmp(key, (*curr)->key) == 0) {
 			tmp = *curr;
 			*curr = (*curr)->next;
-			tmp->next = NULL;
-			bucket_delete(tmp, &self->k, &self->v);
+			entry_delete(tmp, self->K, self->V);
+			self->len--;
 			break;
 		}
 		curr = &(*curr)->next;
@@ -244,12 +259,19 @@ void mcc_hash_map_remove(struct mcc_hash_map *self, const void *key)
 
 void mcc_hash_map_clear(struct mcc_hash_map *self)
 {
-	if (!self)
+	struct mcc_hash_entry *curr, *tmp;
+
+	if (!self || !self->len)
 		return;
 
 	for (mcc_usize i = 0; i < self->cap; i++) {
-		bucket_delete(self->bkts[i], &self->k, &self->v);
-		self->bkts[i] = NULL;
+		curr = self->buckets[i];
+		while (curr) {
+			tmp = curr->next;
+			entry_delete(curr, self->K, self->V);
+			curr = tmp;
+		}
+		self->buckets[i] = NULL;
 	}
 	self->len = 0;
 }
@@ -266,23 +288,23 @@ mcc_err mcc_hash_map_get(struct mcc_hash_map *self, const void *key,
 	if (!ptr)
 		return NONE;
 
-	memcpy(value, ptr, self->v.size);
+	memcpy(value, ptr, self->V->size);
 	return OK;
 }
 
 void *mcc_hash_map_get_ptr(struct mcc_hash_map *self, const void *key)
 {
 	mcc_usize index;
-	struct mcc_bucket *curr;
+	struct mcc_hash_entry *curr;
 
 	if (!self || !key)
 		return NULL;
 
-	index = self->k.hash(key) & (self->cap - 1);
-	curr = self->bkts[index];
+	index = self->K->hash(key) & (self->cap - 1);
+	curr = self->buckets[index];
 	while (curr) {
-		if (cmp_key(key, curr->pair.key, self) == 0)
-			return curr->pair.value;
+		if (self->K->cmp(key, curr->key) == 0)
+			return value_of(curr);
 		curr = curr->next;
 	}
 	return NULL;
@@ -303,14 +325,14 @@ mcc_bool mcc_hash_map_is_empty(struct mcc_hash_map *self)
 	return !self ? true : self->len == 0;
 }
 
-static inline struct mcc_bucket *next_valid_bkt(struct mcc_hash_map *map,
-						mcc_usize *index)
+static inline struct mcc_hash_entry *next_valid_entry(struct mcc_hash_map *map,
+						      mcc_usize *index)
 {
-	while (*index < map->cap && !map->bkts[*index])
+	while (*index < map->cap && !map->buckets[*index])
 		(*index)++;
 
 	if (*index < map->cap)
-		return map->bkts[(*index)++];
+		return map->buckets[(*index)++];
 	else
 		return NULL;
 }
@@ -323,7 +345,7 @@ mcc_err mcc_hash_map_iter_init(struct mcc_hash_map *self,
 
 	iter->interface.next = (mcc_iterator_next_fn)&mcc_hash_map_iter_next;
 	iter->index = 0;
-	iter->current = next_valid_bkt(self, &iter->index);
+	iter->current = next_valid_entry(self, &iter->index);
 	iter->container = self;
 	return OK;
 }
@@ -334,13 +356,14 @@ mcc_bool mcc_hash_map_iter_next(struct mcc_hash_map_iter *iter,
 	if (!iter || (iter->index >= iter->container->cap && !iter->current))
 		return false;
 
-	if (result)
-		memcpy(result, &iter->current->pair,
-		       sizeof(struct mcc_kv_pair));
+	if (result) {
+		result->key = iter->current->key;
+		result->value = value_of(iter->current);
+	}
 
 	if (iter->current->next)
 		iter->current = iter->current->next;
 	else
-		iter->current = next_valid_bkt(iter->container, &iter->index);
+		iter->current = next_valid_entry(iter->container, &iter->index);
 	return true;
 }
