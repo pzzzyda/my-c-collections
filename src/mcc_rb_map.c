@@ -1,19 +1,28 @@
 #include "mcc_rb_map.h"
+#include "mcc_err.h"
 #include <stdlib.h>
+
+struct arg_wrapper {
+	const struct mcc_object_interface *K;
+	const struct mcc_object_interface *V;
+	const void *key;
+	const void *value;
+};
 
 struct mcc_rb_node {
 	mcc_i32 color;
 	struct mcc_rb_node *parent;
 	struct mcc_rb_node *left;
 	struct mcc_rb_node *right;
-	struct mcc_kv_pair pair;
+	void *key;
 };
 
 struct mcc_rb_map {
+	const struct mcc_object_interface *K;
+	const struct mcc_object_interface *V;
+
 	struct mcc_rb_node *root;
 	mcc_usize len;
-	struct mcc_object_interface k;
-	struct mcc_object_interface v;
 };
 
 static void mcc_rb_map_dtor(void *self)
@@ -384,65 +393,60 @@ static void rb_fix_remove(struct mcc_rb_node **root, struct mcc_rb_node *parent)
 	}
 }
 
-static struct mcc_rb_node *rb_node_new(const void *k, const void *v,
-				       const struct mcc_rb_map *map)
+static inline void *value_of(struct mcc_rb_node *node)
+{
+	return (mcc_u8 *)node + sizeof(struct mcc_rb_node);
+}
+
+static struct mcc_rb_node *rb_node_new(const struct arg_wrapper *args)
 {
 	struct mcc_rb_node *self;
-	const struct mcc_object_interface *ki = &map->k;
-	const struct mcc_object_interface *vi = &map->v;
+	mcc_usize total_size = 0;
 
-	self = calloc(1, sizeof(struct mcc_rb_node));
+	total_size += sizeof(struct mcc_rb_node);
+	total_size += args->V->size;
+	self = calloc(1, total_size);
 	if (!self)
 		return NULL;
 
-	self->pair.key = calloc(1, ki->size);
-	if (!self->pair.key)
-		goto handle_key_allocate_err;
-	memcpy(self->pair.key, k, ki->size);
+	self->key = calloc(1, args->K->size);
+	if (!self->key) {
+		free(self);
+		return NULL;
+	}
+	memcpy(self->key, args->key, args->K->size);
+	self->key = self->key;
 
-	self->pair.value = calloc(1, vi->size);
-	if (!self->pair.value)
-		goto handle_value_allocate_err;
-	memcpy(self->pair.value, v, vi->size);
+	memcpy(value_of(self), args->value, args->V->size);
 
 	return self;
-
-handle_value_allocate_err:
-	if (ki->dtor)
-		ki->dtor(self->pair.key);
-	free(self->pair.key);
-handle_key_allocate_err:
-	free(self);
-	return NULL;
 }
 
-static mcc_err rb_node_delete(struct mcc_rb_node *self,
-			      const struct mcc_object_interface *ki,
-			      const struct mcc_object_interface *vi,
-			      const mcc_bool is_recursive)
+static void rb_node_delete(struct mcc_rb_node *self,
+			   const struct mcc_object_interface *K,
+			   const struct mcc_object_interface *V,
+			   const mcc_bool is_recursive)
 {
 	if (!self)
-		return OK;
+		return;
 
 	if (is_recursive) {
-		rb_node_delete(self->left, ki, vi, is_recursive);
-		rb_node_delete(self->right, ki, vi, is_recursive);
+		rb_node_delete(self->left, K, V, is_recursive);
+		rb_node_delete(self->right, K, V, is_recursive);
 	}
 
-	if (ki->dtor)
-		ki->dtor(self->pair.key);
-	free(self->pair.key);
+	if (K->dtor)
+		K->dtor(self->key);
+	free(self->key);
 
-	if (vi->dtor)
-		vi->dtor(self->pair.value);
-	free(self->pair.value);
+	if (V->dtor)
+		V->dtor(value_of(self));
 
 	free(self);
-	return OK;
 }
 
 struct mcc_rb_map *mcc_rb_map_new(const struct mcc_object_interface *key,
-			    const struct mcc_object_interface *value)
+				  const struct mcc_object_interface *value)
 {
 	struct mcc_rb_map *self;
 
@@ -453,8 +457,8 @@ struct mcc_rb_map *mcc_rb_map_new(const struct mcc_object_interface *key,
 	if (!self)
 		return NULL;
 
-	self->k = *key;
-	self->v = *value;
+	self->K = key;
+	self->V = value;
 	return self;
 }
 
@@ -472,15 +476,22 @@ void mcc_rb_map_clear(struct mcc_rb_map *self)
 	if (!self)
 		return;
 
-	rb_node_delete(self->root, &self->k, &self->v, true);
+	rb_node_delete(self->root, self->K, self->V, true);
 	self->root = NULL;
 	self->len = 0;
 }
 
-mcc_err mcc_rb_map_insert(struct mcc_rb_map *self, const void *key, const void *value)
+mcc_err mcc_rb_map_insert(struct mcc_rb_map *self, const void *key,
+			  const void *value)
 {
 	struct mcc_rb_node **curr, *parent;
 	mcc_i32 cmp_res;
+	const struct arg_wrapper args = {
+		.K = self->K,
+		.V = self->V,
+		.key = key,
+		.value = value,
+	};
 
 	if (!self || !value)
 		return INVALID_ARGUMENTS;
@@ -489,20 +500,23 @@ mcc_err mcc_rb_map_insert(struct mcc_rb_map *self, const void *key, const void *
 	parent = NULL;
 	while (*curr) {
 		parent = *curr;
-		cmp_res = self->k.cmp(key, (*curr)->pair.key);
-		if (cmp_res > 0)
+		cmp_res = self->K->cmp(key, (*curr)->key);
+
+		if (cmp_res > 0) {
 			curr = &(*curr)->right;
-		else if (cmp_res < 0)
+		} else if (cmp_res < 0) {
 			curr = &(*curr)->left;
-		else { /* Update the value. */
-			if (self->v.dtor)
-				self->v.dtor((*curr)->pair.value);
-			memcpy((*curr)->pair.value, value, self->v.size);
+		} else { /* Update the value. */
+			if (self->V->size) {
+				if (self->V->dtor)
+					self->V->dtor(value_of(*curr));
+				memcpy(value_of(*curr), value, self->V->size);
+			}
 			return OK;
 		}
 	}
 
-	*curr = rb_node_new(key, value, self);
+	*curr = rb_node_new(&args);
 	if (!*curr)
 		return CANNOT_ALLOCATE_MEMORY;
 
@@ -511,13 +525,6 @@ mcc_err mcc_rb_map_insert(struct mcc_rb_map *self, const void *key, const void *
 	rb_fix_insert(&self->root, *curr);
 	return OK;
 }
-
-// static inline void swap_key_value(struct mcc_rb_node *a, struct mcc_rb_node *b)
-// {
-// 	struct mcc_kv_pair tmp = a->pair;
-// 	a->pair = b->pair;
-// 	b->pair = tmp;
-// }
 
 void mcc_rb_map_remove(struct mcc_rb_map *self, const void *key)
 {
@@ -529,7 +536,7 @@ void mcc_rb_map_remove(struct mcc_rb_map *self, const void *key)
 
 	curr = &self->root;
 	while (*curr) {
-		cmp_res = self->k.cmp(key, (*curr)->pair.key);
+		cmp_res = self->K->cmp(key, (*curr)->key);
 		if (cmp_res > 0)
 			curr = &(*curr)->right;
 		else if (cmp_res < 0)
@@ -549,7 +556,8 @@ void mcc_rb_map_remove(struct mcc_rb_map *self, const void *key)
 		curr = &(*curr)->right;
 		while ((*curr)->left)
 			curr = &(*curr)->left;
-		mcc_memswap(&(*curr)->pair, &tmp->pair, sizeof(struct mcc_kv_pair));
+		mcc_memswap((*curr)->key, tmp->key, self->K->size);
+		mcc_memswap(value_of(*curr), value_of(tmp), self->V->size);
 	}
 
 	tmp = *curr;
@@ -573,7 +581,7 @@ void mcc_rb_map_remove(struct mcc_rb_map *self, const void *key)
 			rb_fix_remove(&self->root, tmp->parent);
 	}
 
-	rb_node_delete(tmp, &self->k, &self->v, false);
+	rb_node_delete(tmp, self->K, self->V, false);
 	self->len -= 1;
 }
 
@@ -585,8 +593,33 @@ mcc_err mcc_rb_map_get(struct mcc_rb_map *self, const void *key, void *value)
 	if (!ptr)
 		return NONE;
 
-	memcpy(value, ptr, self->v.size);
+	memcpy(value, ptr, self->V->size);
 	return OK;
+}
+
+mcc_err mcc_rb_map_get_key_value(struct mcc_rb_map *self, const void *key,
+				 void *k, void *v)
+{
+	struct mcc_rb_node *curr;
+	mcc_i32 cmp_res;
+
+	if (!self || !key || !k || !v)
+		return INVALID_ARGUMENTS;
+
+	curr = self->root;
+	while (curr) {
+		cmp_res = self->K->cmp(key, curr->key);
+		if (cmp_res > 0) {
+			curr = curr->right;
+		} else if (cmp_res < 0) {
+			curr = curr->left;
+		} else {
+			memcpy(k, curr->key, self->K->size);
+			memcpy(v, value_of(curr), self->V->size);
+			return OK;
+		}
+	}
+	return NONE;
 }
 
 void *mcc_rb_map_get_ptr(struct mcc_rb_map *self, const void *key)
@@ -599,13 +632,13 @@ void *mcc_rb_map_get_ptr(struct mcc_rb_map *self, const void *key)
 
 	curr = self->root;
 	while (curr) {
-		cmp_res = self->k.cmp(key, curr->pair.key);
+		cmp_res = self->K->cmp(key, curr->key);
 		if (cmp_res > 0) {
 			curr = curr->right;
 		} else if (cmp_res < 0) {
 			curr = curr->left;
 		} else {
-			return curr->pair.value;
+			return value_of(curr);
 		}
 	}
 	return NULL;
@@ -621,7 +654,8 @@ mcc_bool mcc_rb_map_is_empty(struct mcc_rb_map *self)
 	return !self ? true : self->len == 0;
 }
 
-mcc_err mcc_rb_map_iter_init(struct mcc_rb_map *self, struct mcc_rb_map_iter *iter)
+mcc_err mcc_rb_map_iter_init(struct mcc_rb_map *self,
+			     struct mcc_rb_map_iter *iter)
 {
 	if (!self || !iter)
 		return INVALID_ARGUMENTS;
@@ -635,7 +669,7 @@ mcc_err mcc_rb_map_iter_init(struct mcc_rb_map *self, struct mcc_rb_map_iter *it
 }
 
 mcc_bool mcc_rb_map_iter_next(struct mcc_rb_map_iter *iter,
-			   struct mcc_kv_pair *result)
+			      struct mcc_kv_pair *result)
 {
 	struct mcc_rb_node *curr, *tmp;
 	mcc_compare_fn cmp;
@@ -645,8 +679,10 @@ mcc_bool mcc_rb_map_iter_next(struct mcc_rb_map_iter *iter,
 
 	curr = iter->current;
 
-	if (result)
-		memcpy(result, &curr->pair, sizeof(struct mcc_kv_pair));
+	if (result) {
+		result->key = iter->current->key;
+		result->value = value_of(iter->current);
+	}
 
 	if (curr->right) {
 		/* Find the successor. */
@@ -656,9 +692,9 @@ mcc_bool mcc_rb_map_iter_next(struct mcc_rb_map_iter *iter,
 		iter->current = tmp;
 	} else {
 		tmp = curr->parent;
-		cmp = iter->container->k.cmp;
+		cmp = iter->container->K->cmp;
 
-		while (tmp && cmp(tmp->pair.key, curr->pair.key) <= 0)
+		while (tmp && cmp(tmp->key, curr->key) <= 0)
 			tmp = tmp->parent;
 		iter->current = tmp;
 	}

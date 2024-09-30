@@ -5,6 +5,16 @@
 #include <stdlib.h>
 #include <time.h>
 
+struct A {
+	int x;
+	int y;
+};
+
+int foo(struct A *a)
+{
+	return a->x + a->y;
+}
+
 static int test_str_key_int_value(void)
 {
 	struct mcc_rb_map *map;
@@ -31,9 +41,11 @@ static int test_str_key_int_value(void)
 	printf("len = %ld\n", mcc_rb_map_len(map));
 
 	mcc_rb_map_iter_init(map, &iter);
-	for (struct mcc_kv_pair pair; mcc_rb_map_iter_next(&iter, &pair);)
-		printf("(%s, %d)\n", ((mcc_str *)pair.key)->ptr,
-		       *(int *)pair.value);
+	for (struct mcc_kv_pair pair; mcc_rb_map_iter_next(&iter, &pair);) {
+		mcc_str *k = pair.key;
+		int *v = pair.value;
+		printf("(%s, %d)\n", *k, *v);
+	}
 
 	mcc_rb_map_remove(map, &(mcc_str){"C"});
 	mcc_rb_map_remove(map, &(mcc_str){"b"});
@@ -42,18 +54,22 @@ static int test_str_key_int_value(void)
 	puts("Removed 'C', 'Z', 'b' ");
 
 	mcc_rb_map_iter_init(map, &iter);
-	for (struct mcc_kv_pair pair; mcc_rb_map_iter_next(&iter, &pair);)
-		printf("(%s, %d)\n", ((mcc_str *)pair.key)->ptr,
-		       *(int *)pair.value);
+	for (struct mcc_kv_pair pair; mcc_rb_map_iter_next(&iter, &pair);) {
+		mcc_str *k = pair.key;
+		int *v = pair.value;
+		printf("(%s, %d)\n", *k, *v);
+	}
 
 	mcc_rb_map_clear(map);
 
 	puts("Clear the map");
 
 	mcc_rb_map_iter_init(map, &iter);
-	for (struct mcc_kv_pair pair; mcc_rb_map_iter_next(&iter, &pair);)
-		printf("(%s, %d)\n", ((mcc_str *)pair.key)->ptr,
-		       *(int *)pair.value);
+	for (struct mcc_kv_pair pair; mcc_rb_map_iter_next(&iter, &pair);) {
+		mcc_str *k = pair.key;
+		int *v = pair.value;
+		printf("(%s, %d)\n", *k, *v);
+	}
 
 	mcc_rb_map_delete(map);
 	return 0;
@@ -95,7 +111,7 @@ static int test_str_key_vector_value(void)
 		mcc_str *k = pair.key;
 		tmp = *(struct mcc_vector **)pair.value;
 
-		printf("%s: ", k->ptr);
+		printf("%s: ", *k);
 
 		size_t len = mcc_vector_len(tmp);
 		for (size_t i = 0; i < len; i++) {
