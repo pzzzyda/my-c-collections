@@ -33,6 +33,7 @@ install: all
 uninstall:
 	@rm -f /usr/local/lib/libmcc.so
 	@rm -rf /usr/local/include/my-c-collections
+	@rm -rf $(LIB_DIR) $(OBJ_DIR)
 
 
 # ==== RULES FOR UNIT TESTING ================
@@ -40,8 +41,12 @@ uninstall:
 
 DEBUG_CFLAGS := -g -O0 -Wall -I$(INC_DIR)
 
+debug_compile: \
+$(patsubst $(SRC_DIR)/%.c,./build/unit_test/%.o,$(SRC)) \
+$(patsubst ./test/%.c,./build/unit_test/%.o,$(wildcard ./test/*.c))
+
 clean:
-	@rm -rf $(LIB_DIR) $(OBJ_DIR) ./build/unit_test
+	@rm -rf ./build/unit_test/
 
 ./build/unit_test/mcc_%.o: $(SRC_DIR)/mcc_%.c
 	@mkdir -p $(dir $@)
