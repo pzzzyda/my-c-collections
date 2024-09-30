@@ -5,7 +5,7 @@ my-c-collections is a simple generic container library implemented in C.
 | `mcc_vector` | A dynamic array that scales automatically. |
 | `mcc_deque` | A double-ended queue based on a growable ring buffer implementation. |
 | `mcc_list` | A doubly linked list. |
-| `mcc_map` | An ordered map based on a red-black tree. |
+| `mcc_rb_map` | An ordered map based on a red-black tree. |
 | `mcc_hash_map` | A hash map. |
 ### Install
 ```bash
