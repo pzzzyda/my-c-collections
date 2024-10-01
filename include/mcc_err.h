@@ -7,6 +7,6 @@ typedef enum {
 	INVALID_ARGUMENTS,
 	CANNOT_ALLOCATE_MEMORY,
 	OUT_OF_RANGE,
-} mcc_err;
+} mcc_err_t;
 
 #endif /* _MCC_ERR_H */
