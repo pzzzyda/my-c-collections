@@ -42,7 +42,7 @@ static size_t mcc_hash_map_hash(const void *self)
 	return SIZE_T->hash(&(**p).len);
 }
 
-const struct mcc_object_interface mcc_hash_map_i = {
+const struct mcc_object_interface __mcc_hash_map_obj_intf = {
 	.size = sizeof(struct mcc_hash_map *),
 	.dtor = &mcc_hash_map_dtor,
 	.cmp = &mcc_hash_map_cmp,
