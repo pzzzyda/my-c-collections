@@ -1,14 +1,14 @@
 #ifndef _MCC_UTILS_H
 #define _MCC_UTILS_H
 
-#include "core/mcc_types.h"
+#include <stdint.h>
 #include <string.h>
 
 static inline void mcc_memswap(void *p1, void *p2, size_t n)
 {
-	mcc_u8 tmp[32];
-	mcc_u8 *b1 = p1;
-	mcc_u8 *b2 = p2;
+	uint8_t tmp[32];
+	uint8_t *b1 = p1;
+	uint8_t *b2 = p2;
 	while (n >= 32) {
 		memcpy(tmp, b1, 32);
 		memcpy(b1, b2, 32);
