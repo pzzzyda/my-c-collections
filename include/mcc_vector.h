@@ -8,8 +8,9 @@
 struct mcc_vector;
 
 struct mcc_vector_iter {
-	struct mcc_iterator_interface interface;
-	size_t index;
+	const struct mcc_iterator_interface *iter_intf;
+
+	size_t idx;
 	struct mcc_vector *container;
 };
 
@@ -61,6 +62,6 @@ void *mcc_vector_binary_search(struct mcc_vector *self, const void *key);
 mcc_err_t mcc_vector_iter_init(struct mcc_vector *self,
 			       struct mcc_vector_iter *iter);
 
-bool mcc_vector_iter_next(struct mcc_vector_iter *iter, void *result);
+bool mcc_vector_iter_next(struct mcc_vector_iter *self, void *result);
 
 #endif /* _MCC_VECTOR_H */
