@@ -42,7 +42,7 @@ static int test_store_int(void)
 {
 	struct mcc_list *l;
 
-	l = mcc_list_new(&mcc_i32_i);
+	l = mcc_list_new(INT);
 
 	mcc_list_push_back(l, &(int){0});
 	mcc_list_push_back(l, &(int){1});
@@ -135,7 +135,7 @@ static bool is_ordered(struct mcc_list *l)
 static int test_sort_int_list(void)
 {
 	struct mcc_list *l;
-	l = mcc_list_new(&mcc_i32_i);
+	l = mcc_list_new(INT);
 
 	srand(time(NULL));
 	for (size_t i = 0; i < 51431; i++)
@@ -155,7 +155,7 @@ static int test_sort_int_list(void)
 	return 0;
 }
 
-int main(int argc, char **argv)
+int main(void)
 {
 	test_store_int();
 	test_store_fruit();
