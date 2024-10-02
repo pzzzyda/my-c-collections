@@ -10,40 +10,40 @@ static int test_str_key_int_value(void)
 	struct mcc_hash_map *map;
 	struct mcc_hash_map_iter iter;
 
-	map = mcc_hash_map_new(&mcc_str_i, &mcc_i32_i);
+	map = mcc_hash_map_new(STR, INT);
 
-	mcc_hash_map_insert(map, &(mcc_str){"Apple"}, &(int){0});
-	mcc_hash_map_insert(map, &(mcc_str){"Banana"}, &(int){1});
-	mcc_hash_map_insert(map, &(mcc_str){"Orange"}, &(int){2});
-	mcc_hash_map_insert(map, &(mcc_str){"Raspberry"}, &(int){3});
-	mcc_hash_map_insert(map, &(mcc_str){"Pear"}, &(int){4});
-	mcc_hash_map_insert(map, &(mcc_str){"Watermelon"}, &(int){5});
-	mcc_hash_map_insert(map, &(mcc_str){"Coconut"}, &(int){6});
-	mcc_hash_map_insert(map, &(mcc_str){"Pineapple"}, &(int){7});
-	mcc_hash_map_insert(map, &(mcc_str){"Strawberry"}, &(int){8});
-	mcc_hash_map_insert(map, &(mcc_str){"Grape"}, &(int){9});
+	mcc_hash_map_insert(map, &(mcc_str_t){"Apple"}, &(int){0});
+	mcc_hash_map_insert(map, &(mcc_str_t){"Banana"}, &(int){1});
+	mcc_hash_map_insert(map, &(mcc_str_t){"Orange"}, &(int){2});
+	mcc_hash_map_insert(map, &(mcc_str_t){"Raspberry"}, &(int){3});
+	mcc_hash_map_insert(map, &(mcc_str_t){"Pear"}, &(int){4});
+	mcc_hash_map_insert(map, &(mcc_str_t){"Watermelon"}, &(int){5});
+	mcc_hash_map_insert(map, &(mcc_str_t){"Coconut"}, &(int){6});
+	mcc_hash_map_insert(map, &(mcc_str_t){"Pineapple"}, &(int){7});
+	mcc_hash_map_insert(map, &(mcc_str_t){"Strawberry"}, &(int){8});
+	mcc_hash_map_insert(map, &(mcc_str_t){"Grape"}, &(int){9});
 
 	puts("Raw data");
 	mcc_hash_map_iter_init(map, &iter);
 	for (struct mcc_kv_pair pair; mcc_hash_map_iter_next(&iter, &pair);) {
-		mcc_str *k = pair.key;
+		mcc_str_t *k = pair.key;
 		int *v = pair.value;
 		printf("(%s, %d)\n", *k, *v);
 	}
 	putchar('\n');
 
 	puts("Removed Pineapple");
-	mcc_hash_map_remove(map, &(mcc_str){"Pineapple"});
+	mcc_hash_map_remove(map, &(mcc_str_t){"Pineapple"});
 
 	puts("Removed Pear");
-	mcc_hash_map_remove(map, &(mcc_str){"Pear"});
+	mcc_hash_map_remove(map, &(mcc_str_t){"Pear"});
 
 	puts("Update the value of Apple to 100");
-	mcc_hash_map_insert(map, &(mcc_str){"Apple"}, &(int){100});
+	mcc_hash_map_insert(map, &(mcc_str_t){"Apple"}, &(int){100});
 
 	mcc_hash_map_iter_init(map, &iter);
 	for (struct mcc_kv_pair pair; mcc_hash_map_iter_next(&iter, &pair);) {
-		mcc_str *k = pair.key;
+		mcc_str_t *k = pair.key;
 		int *v = pair.value;
 		printf("(%s, %d)\n", *k, *v);
 	}
@@ -60,18 +60,18 @@ static int test_str_key_vector_value(void)
 	struct mcc_vector *tmp;
 	struct mcc_hash_map_iter iter;
 
-	map = mcc_hash_map_new(&mcc_str_i, &mcc_vector_i);
+	map = mcc_hash_map_new(STR, MCC_VECTOR);
 
-	tmp = mcc_vector_new(&mcc_i32_i);
-	mcc_hash_map_insert(map, &(mcc_str){"a021be"}, &tmp);
-	tmp = mcc_vector_new(&mcc_i32_i);
-	mcc_hash_map_insert(map, &(mcc_str){"92b341"}, &tmp);
-	tmp = mcc_vector_new(&mcc_i32_i);
-	mcc_hash_map_insert(map, &(mcc_str){"891b7a"}, &tmp);
-	tmp = mcc_vector_new(&mcc_i32_i);
-	mcc_hash_map_insert(map, &(mcc_str){"5ab362"}, &tmp);
-	tmp = mcc_vector_new(&mcc_i32_i);
-	mcc_hash_map_insert(map, &(mcc_str){"1bf2e0"}, &tmp);
+	tmp = mcc_vector_new(INT);
+	mcc_hash_map_insert(map, &(mcc_str_t){"a021be"}, &tmp);
+	tmp = mcc_vector_new(INT);
+	mcc_hash_map_insert(map, &(mcc_str_t){"92b341"}, &tmp);
+	tmp = mcc_vector_new(INT);
+	mcc_hash_map_insert(map, &(mcc_str_t){"891b7a"}, &tmp);
+	tmp = mcc_vector_new(INT);
+	mcc_hash_map_insert(map, &(mcc_str_t){"5ab362"}, &tmp);
+	tmp = mcc_vector_new(INT);
+	mcc_hash_map_insert(map, &(mcc_str_t){"1bf2e0"}, &tmp);
 
 	mcc_hash_map_iter_init(map, &iter);
 	srand(time(NULL));
@@ -86,7 +86,7 @@ static int test_str_key_vector_value(void)
 
 	mcc_hash_map_iter_init(map, &iter);
 	for (struct mcc_kv_pair pair; mcc_hash_map_iter_next(&iter, &pair);) {
-		mcc_str *k = pair.key;
+		mcc_str_t *k = pair.key;
 		tmp = *(struct mcc_vector **)pair.value;
 
 		printf("%s: ", *k);

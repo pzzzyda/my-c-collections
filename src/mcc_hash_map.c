@@ -18,8 +18,8 @@ struct mcc_hash_map {
 	const struct mcc_object_interface *V;
 
 	struct mcc_hash_entry **buckets;
-	mcc_usize cap;
-	mcc_usize len;
+	size_t cap;
+	size_t len;
 };
 
 static void mcc_hash_map_dtor(void *self)
@@ -27,19 +27,19 @@ static void mcc_hash_map_dtor(void *self)
 	mcc_hash_map_delete(*(struct mcc_hash_map **)self);
 }
 
-static mcc_i32 mcc_hash_map_cmp(const void *self, const void *other)
+static int mcc_hash_map_cmp(const void *self, const void *other)
 {
 	struct mcc_hash_map *const *p1 = self;
 	struct mcc_hash_map *const *p2 = other;
 
-	return mcc_usize_i.cmp(&(**p1).len, &(**p2).len);
+	return SIZE_T->cmp(&(**p1).len, &(**p2).len);
 }
 
-static mcc_usize mcc_hash_map_hash(const void *self)
+static size_t mcc_hash_map_hash(const void *self)
 {
 	struct mcc_hash_map *const *p = self;
 
-	return mcc_usize_i.hash(&(**p).len);
+	return SIZE_T->hash(&(**p).len);
 }
 
 const struct mcc_object_interface mcc_hash_map_i = {
@@ -51,33 +51,28 @@ const struct mcc_object_interface mcc_hash_map_i = {
 
 static inline void *value_of(struct mcc_hash_entry *entry)
 {
-	return (mcc_u8 *)entry + sizeof(struct mcc_hash_entry);
+	return (uint8_t *)entry + sizeof(struct mcc_hash_entry);
 }
 
 static struct mcc_hash_entry *entry_new(const struct arg_wrapper *args)
 {
 	struct mcc_hash_entry *self;
-	mcc_u8 *tmp;
 
-	mcc_usize total_size = sizeof(struct mcc_hash_entry);
+	size_t total_size = sizeof(struct mcc_hash_entry);
 	total_size += args->V->size;
 
 	self = calloc(1, total_size);
 	if (!self)
 		return NULL;
 
-	tmp = calloc(1, args->K->size);
-	if (!tmp) {
+	self->key = calloc(1, args->K->size);
+	if (!self->key) {
 		free(self);
 		return NULL;
 	}
-	memcpy(tmp, args->key, args->K->size);
-	self->key = tmp;
+	memcpy(self->key, args->key, args->K->size);
 
-	if (args->V->size) {
-		tmp = value_of(self);
-		memcpy(tmp, args->value, args->V->size);
-	}
+	memcpy(value_of(self), args->value, args->V->size);
 
 	return self;
 }
@@ -113,8 +108,8 @@ static inline void entry_update_value(struct mcc_hash_entry *self,
 	memcpy(old_value, value, V->size);
 }
 
-static inline mcc_err entry_add(struct mcc_hash_entry **self,
-				const struct arg_wrapper *args)
+static inline mcc_err_t entry_add(struct mcc_hash_entry **self,
+				  const struct arg_wrapper *args)
 {
 	while (*self) {
 		if (args->K->cmp(args->key, (*self)->key) == 0) {
@@ -130,10 +125,10 @@ static inline mcc_err entry_add(struct mcc_hash_entry **self,
 	return OK;
 }
 
-static mcc_err rehash(struct mcc_hash_map *self, mcc_usize new_capacity)
+static mcc_err_t rehash(struct mcc_hash_map *self, size_t new_capacity)
 {
 	struct mcc_hash_entry **new_buckets, *curr, *tmp;
-	mcc_usize i, index;
+	size_t i, index;
 
 	new_buckets = calloc(new_capacity, sizeof(struct mcc_hash_entry *));
 	if (!new_buckets)
@@ -191,9 +186,9 @@ void mcc_hash_map_delete(struct mcc_hash_map *self)
 	free(self);
 }
 
-mcc_err mcc_hash_map_reserve(struct mcc_hash_map *self, mcc_usize additional)
+mcc_err_t mcc_hash_map_reserve(struct mcc_hash_map *self, size_t additional)
 {
-	mcc_usize new_capacity, needs;
+	size_t new_capacity, needs;
 
 	if (!self)
 		return INVALID_ARGUMENTS;
@@ -209,10 +204,10 @@ mcc_err mcc_hash_map_reserve(struct mcc_hash_map *self, mcc_usize additional)
 	return rehash(self, new_capacity);
 }
 
-mcc_err mcc_hash_map_insert(struct mcc_hash_map *self, const void *key,
-			    const void *value)
+mcc_err_t mcc_hash_map_insert(struct mcc_hash_map *self, const void *key,
+			      const void *value)
 {
-	mcc_usize index;
+	size_t index;
 	const struct arg_wrapper args = {
 		.K = self->K,
 		.V = self->V,
@@ -237,7 +232,7 @@ mcc_err mcc_hash_map_insert(struct mcc_hash_map *self, const void *key,
 
 void mcc_hash_map_remove(struct mcc_hash_map *self, const void *key)
 {
-	mcc_usize index;
+	size_t index;
 	struct mcc_hash_entry **curr, *tmp;
 
 	if (!self || !key)
@@ -264,7 +259,7 @@ void mcc_hash_map_clear(struct mcc_hash_map *self)
 	if (!self || !self->len)
 		return;
 
-	for (mcc_usize i = 0; i < self->cap; i++) {
+	for (size_t i = 0; i < self->cap; i++) {
 		curr = self->buckets[i];
 		while (curr) {
 			tmp = curr->next;
@@ -276,8 +271,8 @@ void mcc_hash_map_clear(struct mcc_hash_map *self)
 	self->len = 0;
 }
 
-mcc_err mcc_hash_map_get(struct mcc_hash_map *self, const void *key,
-			 void *value)
+mcc_err_t mcc_hash_map_get(struct mcc_hash_map *self, const void *key,
+			   void *value)
 {
 	void *ptr;
 
@@ -294,7 +289,7 @@ mcc_err mcc_hash_map_get(struct mcc_hash_map *self, const void *key,
 
 void *mcc_hash_map_get_ptr(struct mcc_hash_map *self, const void *key)
 {
-	mcc_usize index;
+	size_t index;
 	struct mcc_hash_entry *curr;
 
 	if (!self || !key)
@@ -310,23 +305,23 @@ void *mcc_hash_map_get_ptr(struct mcc_hash_map *self, const void *key)
 	return NULL;
 }
 
-mcc_usize mcc_hash_map_capacity(struct mcc_hash_map *self)
+size_t mcc_hash_map_capacity(struct mcc_hash_map *self)
 {
 	return !self ? 0 : self->cap;
 }
 
-mcc_usize mcc_hash_map_len(struct mcc_hash_map *self)
+size_t mcc_hash_map_len(struct mcc_hash_map *self)
 {
 	return !self ? 0 : self->len;
 }
 
-mcc_bool mcc_hash_map_is_empty(struct mcc_hash_map *self)
+bool mcc_hash_map_is_empty(struct mcc_hash_map *self)
 {
 	return !self ? true : self->len == 0;
 }
 
 static inline struct mcc_hash_entry *next_valid_entry(struct mcc_hash_map *map,
-						      mcc_usize *index)
+						      size_t *index)
 {
 	while (*index < map->cap && !map->buckets[*index])
 		(*index)++;
@@ -337,8 +332,8 @@ static inline struct mcc_hash_entry *next_valid_entry(struct mcc_hash_map *map,
 		return NULL;
 }
 
-mcc_err mcc_hash_map_iter_init(struct mcc_hash_map *self,
-			       struct mcc_hash_map_iter *iter)
+mcc_err_t mcc_hash_map_iter_init(struct mcc_hash_map *self,
+				 struct mcc_hash_map_iter *iter)
 {
 	if (!self || !iter)
 		return INVALID_ARGUMENTS;
@@ -350,8 +345,8 @@ mcc_err mcc_hash_map_iter_init(struct mcc_hash_map *self,
 	return OK;
 }
 
-mcc_bool mcc_hash_map_iter_next(struct mcc_hash_map_iter *iter,
-				struct mcc_kv_pair *result)
+bool mcc_hash_map_iter_next(struct mcc_hash_map_iter *iter,
+			    struct mcc_kv_pair *result)
 {
 	if (!iter || (iter->index >= iter->container->cap && !iter->current))
 		return false;
