@@ -46,7 +46,7 @@ static int test_store_int(void)
 {
 	struct mcc_deque *d;
 
-	d = mcc_deque_new(&mcc_i32_i);
+	d = mcc_deque_new(INT);
 
 	mcc_deque_push_back(d, &(int){0});
 	mcc_deque_push_back(d, &(int){1});
@@ -112,7 +112,7 @@ static int test_sort_int_deque(void)
 {
 	struct mcc_deque *d;
 
-	d = mcc_deque_new(&mcc_i32_i);
+	d = mcc_deque_new(INT);
 
 	srand(time(NULL));
 	for (size_t i = 0; i < 51894; i++)
@@ -137,10 +137,10 @@ static int test_store_int_deque(void)
 	struct mcc_deque *d, *tmp;
 	struct mcc_deque_iter iter;
 
-	d = mcc_deque_new(&mcc_deque_i);
+	d = mcc_deque_new(MCC_DEQUE);
 
 	for (size_t i = 0; i < 5; i++) {
-		tmp = mcc_deque_new(&mcc_i32_i);
+		tmp = mcc_deque_new(INT);
 		mcc_deque_push_back(d, &tmp);
 	}
 
@@ -163,11 +163,11 @@ static int test_store_int_deque(void)
 static int test_binary_search()
 {
 	struct mcc_deque *d;
-	mcc_i32 n = 20;
-	mcc_i32 i = 0;
-	mcc_i32 *v;
+	int n = 20;
+	int i = 0;
+	int *v;
 
-	d = mcc_deque_new(&mcc_i32_i);
+	d = mcc_deque_new(INT);
 
 	for (; i < n / 2; i++) {
 		mcc_deque_push_back(d, &i);
@@ -178,7 +178,7 @@ static int test_binary_search()
 
 	mcc_deque_sort(d);
 
-	for (mcc_i32 j = 0; j < n; j++) {
+	for (int j = 0; j < n; j++) {
 		if (!(v = mcc_deque_binary_search(d, &j)))
 			printf("No %d\n", j);
 		else
@@ -193,7 +193,7 @@ static int test_insert_and_remove()
 {
 	struct mcc_deque *d;
 
-	d = mcc_deque_new(&mcc_i32_i);
+	d = mcc_deque_new(INT);
 
 	mcc_deque_push_back(d, &(int){0});
 	mcc_deque_push_back(d, &(int){1});
