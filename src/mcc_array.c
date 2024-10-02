@@ -2,112 +2,101 @@
 #include "mcc_utils.h"
 #include <stdlib.h>
 
-struct mcc_array *mcc_array_new(const struct mcc_object_interface *T,
-				mcc_usize capacity)
+mcc_array_t *mcc_array_new(const struct mcc_object_interface *T, size_t len)
 {
-	struct mcc_array *self;
-	mcc_usize n;
+	mcc_array_t *self;
+	size_t n;
 
 	if (!T)
 		return NULL;
 
-	n = sizeof(struct mcc_array) + capacity * T->size;
+	n = sizeof(mcc_array_t) + len * T->size;
 	self = calloc(1, n);
 	if (!self)
 		return NULL;
 
 	self->T = T;
-	self->cap = capacity;
+	self->len = len;
 	return self;
 }
 
-void mcc_array_delete(struct mcc_array *self)
+void mcc_array_delete(mcc_array_t *self)
 {
 	free(self);
 }
 
-struct mcc_array *mcc_array_reserve(struct mcc_array *self, mcc_usize extras)
+mcc_array_t *mcc_array_reserve(mcc_array_t *self, size_t additional)
 {
-	struct mcc_array *new_arr;
-	mcc_usize needs, new_capacity, n;
+	mcc_array_t *new_arr;
+	size_t n, new_len;
+	const size_t needs = self->len + additional;
 
-	needs = self->cap + extras;
-	if (needs <= self->cap)
+	if (needs <= self->len)
 		return self;
 
-	new_capacity = !self->cap ? 8 : self->cap << 1;
-	while (new_capacity < needs)
-		new_capacity <<= 1;
+	new_len = !self->len ? 8 : self->len << 1;
+	while (new_len < needs)
+		new_len <<= 1;
 
-	n = sizeof(struct mcc_array) + new_capacity * self->T->size;
+	n = sizeof(mcc_array_t) + new_len * self->T->size;
 	new_arr = realloc(self, n);
 	if (!new_arr)
 		return NULL;
 
-	n = (new_capacity - new_arr->cap) * new_arr->T->size;
-	memset(mcc_array_at(new_arr, new_arr->cap), 0, n);
+	n = (new_len - new_arr->len) * new_arr->T->size;
+	memset(mcc_array_at(new_arr, new_arr->len), 0, n);
 
-	new_arr->cap = new_capacity;
+	new_arr->len = new_len;
 	return new_arr;
 }
 
-struct mcc_array *mcc_array_shrink(struct mcc_array *self, mcc_usize capacity)
+mcc_array_t *mcc_array_resize(mcc_array_t *self, size_t new_len)
 {
-	struct mcc_array *new_arr;
-	mcc_usize n;
+	mcc_array_t *new_arr;
+	size_t n;
 
-	n = sizeof(struct mcc_array) + capacity * self->T->size;
+	n = sizeof(mcc_array_t) + new_len * self->T->size;
 	new_arr = realloc(self, n);
 	if (!new_arr)
 		return NULL;
 
-	new_arr->cap = capacity;
+	new_arr->len = new_len;
 	return new_arr;
 }
 
-void *mcc_array_at(struct mcc_array *self, mcc_usize index)
+void *mcc_array_at(mcc_array_t *self, size_t index)
 {
-	return (mcc_u8 *)self + sizeof(struct mcc_array) +
-	       index * self->T->size;
+	return (uint8_t *)self + sizeof(mcc_array_t) + index * self->T->size;
 }
 
-void mcc_array_set(struct mcc_array *self, mcc_usize index, const void *value)
+void mcc_array_set(mcc_array_t *self, size_t index, const void *value)
 {
 	memcpy(mcc_array_at(self, index), value, self->T->size);
 }
 
-void mcc_array_get(struct mcc_array *self, mcc_usize index, void *value)
+void mcc_array_get(mcc_array_t *self, size_t index, void *value)
 {
 	memcpy(value, mcc_array_at(self, index), self->T->size);
 }
 
-void *mcc_array_ptr(struct mcc_array *self)
+void *mcc_array_ptr(mcc_array_t *self)
 {
-	return (mcc_u8 *)self + sizeof(struct mcc_array);
+	return (uint8_t *)self + sizeof(mcc_array_t);
 }
 
-void mcc_array_move(struct mcc_array *self, mcc_usize to, mcc_usize from,
-		    mcc_usize n)
+void mcc_array_move(mcc_array_t *self, size_t to, size_t from, size_t n)
 {
-	mcc_usize total_size = n * self->T->size;
-	void *p1 = mcc_array_at(self, to);
-	void *p2 = mcc_array_at(self, from);
+	size_t total_size = n * self->T->size;
+	void *pa = mcc_array_at(self, to);
+	void *pb = mcc_array_at(self, from);
 
-	memmove(p1, p2, total_size);
+	memmove(pa, pb, total_size);
 }
 
-void mcc_array_swap(struct mcc_array *self, mcc_usize a, mcc_usize b)
+void mcc_array_swap(mcc_array_t *self, size_t a, size_t b)
 {
-	void *p1 = mcc_array_at(self, a);
-	void *p2 = mcc_array_at(self, b);
+	void *pa = mcc_array_at(self, a);
+	void *pb = mcc_array_at(self, b);
 
-	mcc_memswap(p1, p2, self->T->size);
-}
-
-mcc_i32 mcc_array_cmp(struct mcc_array *self, mcc_usize a, mcc_usize b)
-{
-	void *p1 = mcc_array_at(self, a);
-	void *p2 = mcc_array_at(self, b);
-
-	return self->T->cmp(p1, p2);
+	mcc_memswap(pa, pb, self->T->size);
 }
