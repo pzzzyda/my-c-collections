@@ -27,7 +27,7 @@ struct person {
 	int gender;
 };
 
-mcc_i32 person_cmp(const void *a, const void *b)
+int person_cmp(const void *a, const void *b)
 {
 	const struct person *pa = a;
 	const struct person *pb = b;
