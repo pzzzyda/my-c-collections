@@ -45,7 +45,7 @@ static int test_store_int(void)
 {
 	struct mcc_vector *v;
 
-	v = mcc_vector_new(&mcc_i32_i);
+	v = mcc_vector_new(INT);
 
 	mcc_vector_push(v, &(int){0});
 	mcc_vector_push(v, &(int){1});
@@ -102,10 +102,10 @@ static int test_store_int_vector(void)
 	struct mcc_vector *v, *tmp;
 	struct mcc_vector_iter iter;
 
-	v = mcc_vector_new(&mcc_vector_i);
+	v = mcc_vector_new(MCC_VECTOR);
 
 	for (size_t i = 0; i < 3; i++) {
-		tmp = mcc_vector_new(&mcc_i32_i);
+		tmp = mcc_vector_new(INT);
 		mcc_vector_push(v, &tmp);
 	}
 
@@ -136,7 +136,7 @@ static int test_store_int_vector(void)
 static int test_iterator(void)
 {
 	struct mcc_vector_iter iter;
-	struct mcc_vector *v = mcc_vector_new(&mcc_i32_i);
+	struct mcc_vector *v = mcc_vector_new(INT);
 
 	for (int i = 0; i < 20; i++) {
 		mcc_vector_push(v, &i);
@@ -154,38 +154,38 @@ static int test_iterator(void)
 
 static int test_insert_and_remove()
 {
-	struct mcc_vector *v = mcc_vector_new(&mcc_i32_i);
+	struct mcc_vector *v = mcc_vector_new(INT);
 
 	for (int i = 0; i < 10; i++)
 		mcc_vector_push(v, &i);
 	print_int_vector(v, "Raw data:\n");
 
-	mcc_vector_insert(v, 9, &(mcc_i32){0});
+	mcc_vector_insert(v, 9, &(int){0});
 	print_int_vector(v, "Insert 0 at 9:\n");
 
-	mcc_vector_insert(v, 0, &(mcc_i32){0});
+	mcc_vector_insert(v, 0, &(int){0});
 	print_int_vector(v, "Insert 0 at 0:\n");
 
-	mcc_vector_insert(v, mcc_vector_len(v), &(mcc_i32){0});
+	mcc_vector_insert(v, mcc_vector_len(v), &(int){0});
 	print_int_vector(v, "Insert 0 at the end:\n");
 
 	mcc_vector_remove(v, 8);
 	print_int_vector(v, "Remove element at 8:\n");
 
-	mcc_vector_insert(v, 2, &(mcc_i32){0});
+	mcc_vector_insert(v, 2, &(int){0});
 	print_int_vector(v, "Insert 0 at 2:\n");
 
 	mcc_vector_remove(v, 6);
 	print_int_vector(v, "Remove element at 6:\n");
 
-	mcc_vector_insert(v, 5, &(mcc_i32){0});
+	mcc_vector_insert(v, 5, &(int){0});
 	print_int_vector(v, "Insert 0 at 5:\n");
 
 	mcc_vector_delete(v);
 	return 0;
 }
 
-int main(int argc, char **argv)
+int main(void)
 {
 	test_store_int();
 	test_store_fruit();
