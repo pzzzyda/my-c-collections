@@ -459,25 +459,31 @@ void *mcc_deque_binary_search(struct mcc_deque *self, const void *key)
 	return NULL;
 }
 
+static const struct mcc_iterator_interface mcc_deque_iter_intf = {
+	.next = (mcc_iterator_next_fn)&mcc_deque_iter_next,
+};
+
 mcc_err_t mcc_deque_iter_init(struct mcc_deque *self,
 			      struct mcc_deque_iter *iter)
 {
 	if (!self || !iter)
 		return INVALID_ARGUMENTS;
 
-	iter->interface.next = (mcc_iterator_next_fn)&mcc_deque_iter_next;
-	iter->index = 0;
+	iter->iter_intf = &mcc_deque_iter_intf;
+	iter->idx = 0;
 	iter->container = self;
 	return OK;
 }
 
-bool mcc_deque_iter_next(struct mcc_deque_iter *iter, void *result)
+bool mcc_deque_iter_next(struct mcc_deque_iter *self, void *result)
 {
-	if (!iter || iter->index >= iter->container->len)
+	if (!self || !result)
 		return false;
 
-	if (result)
-		mcc_deque_get(iter->container, iter->index, result);
-	iter->index++;
+	if (self->idx >= self->container->len)
+		return false;
+
+	mcc_deque_get(self->container, self->idx, result);
+	self->idx++;
 	return true;
 }

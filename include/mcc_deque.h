@@ -8,8 +8,9 @@
 struct mcc_deque;
 
 struct mcc_deque_iter {
-	struct mcc_iterator_interface interface;
-	size_t index;
+	const struct mcc_iterator_interface *iter_intf;
+
+	size_t idx;
 	struct mcc_deque *container;
 };
 
@@ -63,6 +64,6 @@ void *mcc_deque_binary_search(struct mcc_deque *self, const void *key);
 mcc_err_t mcc_deque_iter_init(struct mcc_deque *self,
 			      struct mcc_deque_iter *iter);
 
-bool mcc_deque_iter_next(struct mcc_deque_iter *iter, void *result);
+bool mcc_deque_iter_next(struct mcc_deque_iter *self, void *result);
 
 #endif /* _MCC_DEQUE_H */
