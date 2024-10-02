@@ -1,17 +1,26 @@
 #ifndef _MCC_ITERATOR_H
 #define _MCC_ITERATOR_H
 
-#include "mcc_types.h"
+#include <stdbool.h>
 
-typedef mcc_bool (*mcc_iterator_next_fn)(void *iter, void *result);
+typedef bool (*mcc_iterator_next_fn)(void *self, void *result);
 
 struct mcc_iterator_interface {
 	mcc_iterator_next_fn next;
 };
 
-static inline mcc_bool mcc_iter_next(void *iter, void *result)
+struct mcc_iterator {
+	const struct mcc_iterator_interface *iter_intf;
+};
+
+static inline const struct mcc_iterator_interface *mcc_iter_intf_of(void *self)
 {
-	return ((struct mcc_iterator_interface *)iter)->next(iter, result);
+	return ((struct mcc_iterator *)self)->iter_intf;
+}
+
+static inline bool mcc_iter_next(void *self, void *result)
+{
+	return mcc_iter_intf_of(self)->next(self, result);
 }
 
 #endif /* _MCC_ITERATOR_H */
