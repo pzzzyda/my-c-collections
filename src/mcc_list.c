@@ -41,7 +41,7 @@ static size_t mcc_list_hash(const void *self)
 	return SIZE_T->hash(&(**p).len);
 }
 
-const struct mcc_object_interface mcc_list_i = {
+const struct mcc_object_interface __mcc_list_obj_intf = {
 	.size = sizeof(struct mcc_list *),
 	.dtor = &mcc_list_dtor,
 	.cmp = &mcc_list_cmp,
