@@ -1,5 +1,4 @@
 #include "mcc_rb_map.h"
-#include "mcc_err.h"
 #include <stdlib.h>
 
 struct arg_wrapper {
@@ -10,7 +9,7 @@ struct arg_wrapper {
 };
 
 struct mcc_rb_node {
-	mcc_i32 color;
+	int color;
 	struct mcc_rb_node *parent;
 	struct mcc_rb_node *left;
 	struct mcc_rb_node *right;
@@ -22,7 +21,7 @@ struct mcc_rb_map {
 	const struct mcc_object_interface *V;
 
 	struct mcc_rb_node *root;
-	mcc_usize len;
+	size_t len;
 };
 
 static void mcc_rb_map_dtor(void *self)
@@ -30,39 +29,39 @@ static void mcc_rb_map_dtor(void *self)
 	mcc_rb_map_delete(*(struct mcc_rb_map **)self);
 }
 
-static mcc_i32 mcc_rb_map_cmp(const void *self, const void *other)
+static int mcc_rb_map_cmp(const void *self, const void *other)
 {
 	struct mcc_rb_map *const *p1 = self;
 	struct mcc_rb_map *const *p2 = other;
 
-	return mcc_usize_i.cmp(&(**p1).len, &(**p2).len);
+	return SIZE_T->cmp(&(**p1).len, &(**p2).len);
 }
 
-static mcc_usize mcc_rb_map_hash(const void *self)
+static size_t mcc_rb_map_hash(const void *self)
 {
 	struct mcc_rb_map *const *p = self;
 
-	return mcc_usize_i.hash(&(**p).len);
+	return SIZE_T->hash(&(**p).len);
 }
 
-const struct mcc_object_interface mcc_rb_map_i = {
+const struct mcc_object_interface __mcc_rb_map_obj_intf = {
 	.size = sizeof(struct mcc_rb_map *),
 	.dtor = &mcc_rb_map_dtor,
 	.cmp = &mcc_rb_map_cmp,
 	.hash = &mcc_rb_map_hash,
 };
 
-static inline mcc_bool rb_is_red(struct mcc_rb_node *node)
+static inline bool rb_is_red(struct mcc_rb_node *node)
 {
 	return !node ? false : node->color == MCC_RB_RED;
 }
 
-static inline mcc_bool rb_is_black(struct mcc_rb_node *node)
+static inline bool rb_is_black(struct mcc_rb_node *node)
 {
 	return !node ? true : node->color == MCC_RB_BLACK;
 }
 
-static inline mcc_bool rb_is_root(struct mcc_rb_node *node)
+static inline bool rb_is_root(struct mcc_rb_node *node)
 {
 	return !node ? false : node->parent == NULL;
 }
@@ -395,13 +394,13 @@ static void rb_fix_remove(struct mcc_rb_node **root, struct mcc_rb_node *parent)
 
 static inline void *value_of(struct mcc_rb_node *node)
 {
-	return (mcc_u8 *)node + sizeof(struct mcc_rb_node);
+	return (uint8_t *)node + sizeof(struct mcc_rb_node);
 }
 
 static struct mcc_rb_node *rb_node_new(const struct arg_wrapper *args)
 {
 	struct mcc_rb_node *self;
-	mcc_usize total_size = 0;
+	size_t total_size = 0;
 
 	total_size += sizeof(struct mcc_rb_node);
 	total_size += args->V->size;
@@ -425,7 +424,7 @@ static struct mcc_rb_node *rb_node_new(const struct arg_wrapper *args)
 static void rb_node_delete(struct mcc_rb_node *self,
 			   const struct mcc_object_interface *K,
 			   const struct mcc_object_interface *V,
-			   const mcc_bool is_recursive)
+			   const bool is_recursive)
 {
 	if (!self)
 		return;
@@ -445,20 +444,20 @@ static void rb_node_delete(struct mcc_rb_node *self,
 	free(self);
 }
 
-struct mcc_rb_map *mcc_rb_map_new(const struct mcc_object_interface *key,
-				  const struct mcc_object_interface *value)
+struct mcc_rb_map *mcc_rb_map_new(const struct mcc_object_interface *K,
+				  const struct mcc_object_interface *V)
 {
 	struct mcc_rb_map *self;
 
-	if (!key || !value)
+	if (!K || !V)
 		return NULL;
 
 	self = calloc(1, sizeof(struct mcc_rb_map));
 	if (!self)
 		return NULL;
 
-	self->K = key;
-	self->V = value;
+	self->K = K;
+	self->V = V;
 	return self;
 }
 
@@ -481,11 +480,11 @@ void mcc_rb_map_clear(struct mcc_rb_map *self)
 	self->len = 0;
 }
 
-mcc_err mcc_rb_map_insert(struct mcc_rb_map *self, const void *key,
-			  const void *value)
+mcc_err_t mcc_rb_map_insert(struct mcc_rb_map *self, const void *key,
+			    const void *value)
 {
 	struct mcc_rb_node **curr, *parent;
-	mcc_i32 cmp_res;
+	int cmp_res;
 	const struct arg_wrapper args = {
 		.K = self->K,
 		.V = self->V,
@@ -529,7 +528,7 @@ mcc_err mcc_rb_map_insert(struct mcc_rb_map *self, const void *key,
 void mcc_rb_map_remove(struct mcc_rb_map *self, const void *key)
 {
 	struct mcc_rb_node **curr, *tmp;
-	mcc_i32 cmp_res;
+	int cmp_res;
 
 	if (!self || !key)
 		return;
@@ -585,7 +584,7 @@ void mcc_rb_map_remove(struct mcc_rb_map *self, const void *key)
 	self->len -= 1;
 }
 
-mcc_err mcc_rb_map_get(struct mcc_rb_map *self, const void *key, void *value)
+mcc_err_t mcc_rb_map_get(struct mcc_rb_map *self, const void *key, void *value)
 {
 	void *ptr;
 
@@ -597,11 +596,11 @@ mcc_err mcc_rb_map_get(struct mcc_rb_map *self, const void *key, void *value)
 	return OK;
 }
 
-mcc_err mcc_rb_map_get_key_value(struct mcc_rb_map *self, const void *key,
-				 void *k, void *v)
+mcc_err_t mcc_rb_map_get_key_value(struct mcc_rb_map *self, const void *key,
+				   void *k, void *v)
 {
 	struct mcc_rb_node *curr;
-	mcc_i32 cmp_res;
+	int cmp_res;
 
 	if (!self || !key || !k || !v)
 		return INVALID_ARGUMENTS;
@@ -625,7 +624,7 @@ mcc_err mcc_rb_map_get_key_value(struct mcc_rb_map *self, const void *key,
 void *mcc_rb_map_get_ptr(struct mcc_rb_map *self, const void *key)
 {
 	struct mcc_rb_node *curr;
-	mcc_i32 cmp_res;
+	int cmp_res;
 
 	if (!self || !key)
 		return NULL;
@@ -644,18 +643,18 @@ void *mcc_rb_map_get_ptr(struct mcc_rb_map *self, const void *key)
 	return NULL;
 }
 
-mcc_usize mcc_rb_map_len(struct mcc_rb_map *self)
+size_t mcc_rb_map_len(struct mcc_rb_map *self)
 {
 	return !self ? 0 : self->len;
 }
 
-mcc_bool mcc_rb_map_is_empty(struct mcc_rb_map *self)
+bool mcc_rb_map_is_empty(struct mcc_rb_map *self)
 {
 	return !self ? true : self->len == 0;
 }
 
-mcc_err mcc_rb_map_iter_init(struct mcc_rb_map *self,
-			     struct mcc_rb_map_iter *iter)
+mcc_err_t mcc_rb_map_iter_init(struct mcc_rb_map *self,
+			       struct mcc_rb_map_iter *iter)
 {
 	if (!self || !iter)
 		return INVALID_ARGUMENTS;
@@ -668,8 +667,8 @@ mcc_err mcc_rb_map_iter_init(struct mcc_rb_map *self,
 	return OK;
 }
 
-mcc_bool mcc_rb_map_iter_next(struct mcc_rb_map_iter *iter,
-			      struct mcc_kv_pair *result)
+bool mcc_rb_map_iter_next(struct mcc_rb_map_iter *iter,
+			  struct mcc_kv_pair *result)
 {
 	struct mcc_rb_node *curr, *tmp;
 	mcc_compare_fn cmp;
