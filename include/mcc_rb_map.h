@@ -36,6 +36,9 @@ mcc_err_t mcc_rb_map_get(struct mcc_rb_map *self, const void *key, void *value);
 
 void *mcc_rb_map_get_ptr(struct mcc_rb_map *self, const void *key);
 
+mcc_err_t mcc_rb_map_get_key_value(struct mcc_rb_map *self, const void *key,
+				   struct mcc_kv_pair *pair);
+
 size_t mcc_rb_map_len(struct mcc_rb_map *self);
 
 bool mcc_rb_map_is_empty(struct mcc_rb_map *self);

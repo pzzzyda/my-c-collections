@@ -93,3 +93,9 @@ test_%: ./build/unit_test/test_%.out
 ./build/unit_test/mcc_hash_set.o
 	@mkdir -p $(dir $@)
 	@$(CC) $^ -o $@
+
+./build/unit_test/test_rb_set.out: ./build/unit_test/test_rb_set.o \
+./build/unit_test/mcc_object.o ./build/unit_test/mcc_rb_map.o \
+./build/unit_test/mcc_rb_set.o
+	@mkdir -p $(dir $@)
+	@$(CC) $^ -o $@

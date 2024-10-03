@@ -597,12 +597,12 @@ mcc_err_t mcc_rb_map_get(struct mcc_rb_map *self, const void *key, void *value)
 }
 
 mcc_err_t mcc_rb_map_get_key_value(struct mcc_rb_map *self, const void *key,
-				   void *k, void *v)
+				   struct mcc_kv_pair *pair)
 {
 	struct mcc_rb_node *curr;
 	int cmp_res;
 
-	if (!self || !key || !k || !v)
+	if (!self || !key || !pair)
 		return INVALID_ARGUMENTS;
 
 	curr = self->root;
@@ -613,8 +613,8 @@ mcc_err_t mcc_rb_map_get_key_value(struct mcc_rb_map *self, const void *key,
 		} else if (cmp_res < 0) {
 			curr = curr->left;
 		} else {
-			memcpy(k, curr->key, self->K->size);
-			memcpy(v, value_of(curr), self->V->size);
+			memcpy(pair->key, curr->key, self->K->size);
+			memcpy(pair->value, value_of(curr), self->V->size);
 			return OK;
 		}
 	}
