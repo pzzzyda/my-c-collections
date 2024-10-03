@@ -7,6 +7,8 @@ my-c-collections is a simple generic container library implemented in C.
 | `mcc_list` | A doubly linked list. |
 | `mcc_rb_map` | An ordered map based on a red-black tree. |
 | `mcc_hash_map` | A hash map. |
+| `mcc_rb_set` | An ordered set based on mcc_rb_map |
+| `mcc_hash_set` | A hash set based on mcc_hash_map |
 ### Install
 ```bash
 sudo make install
