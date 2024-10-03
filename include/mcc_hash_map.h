@@ -11,9 +11,10 @@ struct mcc_hash_entry;
 struct mcc_hash_map;
 
 struct mcc_hash_map_iter {
-	struct mcc_iterator_interface interface;
-	size_t index;
-	struct mcc_hash_entry *current;
+	struct mcc_iter base;
+
+	size_t idx;
+	struct mcc_hash_entry *curr;
 	struct mcc_hash_map *container;
 };
 
@@ -45,7 +46,7 @@ bool mcc_hash_map_is_empty(struct mcc_hash_map *self);
 mcc_err_t mcc_hash_map_iter_init(struct mcc_hash_map *self,
 				 struct mcc_hash_map_iter *iter);
 
-bool mcc_hash_map_iter_next(struct mcc_hash_map_iter *iter,
+bool mcc_hash_map_iter_next(struct mcc_hash_map_iter *self,
 			    struct mcc_kv_pair *result);
 
 #endif /* _MCC_HASH_MAP_H */

@@ -332,33 +332,38 @@ static inline struct mcc_hash_entry *next_valid_entry(struct mcc_hash_map *map,
 		return NULL;
 }
 
+static const struct mcc_iterator_interface mcc_hash_map_iter_intf = {
+	.next = (mcc_iterator_next_fn)&mcc_hash_map_iter_next,
+};
+
 mcc_err_t mcc_hash_map_iter_init(struct mcc_hash_map *self,
 				 struct mcc_hash_map_iter *iter)
 {
 	if (!self || !iter)
 		return INVALID_ARGUMENTS;
 
-	iter->interface.next = (mcc_iterator_next_fn)&mcc_hash_map_iter_next;
-	iter->index = 0;
-	iter->current = next_valid_entry(self, &iter->index);
+	iter->base.iter_intf = &mcc_hash_map_iter_intf;
+	iter->idx = 0;
+	iter->curr = next_valid_entry(self, &iter->idx);
 	iter->container = self;
 	return OK;
 }
 
-bool mcc_hash_map_iter_next(struct mcc_hash_map_iter *iter,
+bool mcc_hash_map_iter_next(struct mcc_hash_map_iter *self,
 			    struct mcc_kv_pair *result)
 {
-	if (!iter || (iter->index >= iter->container->cap && !iter->current))
+	if (!self || !result)
 		return false;
 
-	if (result) {
-		result->key = iter->current->key;
-		result->value = value_of(iter->current);
-	}
+	if (self->idx >= self->container->cap && !self->curr)
+		return false;
 
-	if (iter->current->next)
-		iter->current = iter->current->next;
+	memcpy(result->key, self->curr->key, self->container->K->size);
+	memcpy(result->value, value_of(self->curr), self->container->V->size);
+
+	if (self->curr->next)
+		self->curr = self->curr->next;
 	else
-		iter->current = next_valid_entry(iter->container, &iter->index);
+		self->curr = next_valid_entry(self->container, &self->idx);
 	return true;
 }
