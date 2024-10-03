@@ -469,7 +469,7 @@ mcc_err_t mcc_deque_iter_init(struct mcc_deque *self,
 	if (!self || !iter)
 		return INVALID_ARGUMENTS;
 
-	iter->iter_intf = &mcc_deque_iter_intf;
+	iter->base.iter_intf = &mcc_deque_iter_intf;
 	iter->idx = 0;
 	iter->container = self;
 	return OK;

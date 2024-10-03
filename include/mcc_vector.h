@@ -8,7 +8,7 @@
 struct mcc_vector;
 
 struct mcc_vector_iter {
-	const struct mcc_iterator_interface *iter_intf;
+	struct mcc_iter base;
 
 	size_t idx;
 	struct mcc_vector *container;

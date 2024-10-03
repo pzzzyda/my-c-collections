@@ -130,7 +130,7 @@ const struct mcc_object_interface fruit_obj_intf = {
 	.hash = NULL,
 };
 
-void print_fruit_vector(struct mcc_deque *deq, const char *fmt, ...)
+void print_fruit_deque(struct mcc_deque *deq, const char *fmt, ...)
 {
 	struct mcc_deque_iter iter;
 	struct fruit elem;
@@ -158,10 +158,10 @@ int test_automatic_destructor_call()
 	mcc_deque_push_front(d, &(struct fruit){strdup("Banana"), 5});
 	mcc_deque_push_front(d, &(struct fruit){strdup("Grape"), 6});
 	mcc_deque_push_front(d, &(struct fruit){strdup("Strawberry"), 7});
-	print_fruit_vector(d, "Before sorting (by name):\n");
+	print_fruit_deque(d, "Before sorting (by name):\n");
 
 	mcc_deque_sort(d);
-	print_fruit_vector(d, "After sorting (by name):\n");
+	print_fruit_deque(d, "After sorting (by name):\n");
 
 	mcc_deque_delete(d);
 	puts("testing done");

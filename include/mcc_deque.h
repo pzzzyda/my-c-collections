@@ -8,7 +8,7 @@
 struct mcc_deque;
 
 struct mcc_deque_iter {
-	const struct mcc_iterator_interface *iter_intf;
+	struct mcc_iter base;
 
 	size_t idx;
 	struct mcc_deque *container;

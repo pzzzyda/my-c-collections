@@ -10,8 +10,9 @@ struct mcc_list_node;
 struct mcc_list;
 
 struct mcc_list_iter {
-	struct mcc_iterator_interface interface;
-	struct mcc_list_node *current;
+	struct mcc_iter base;
+
+	struct mcc_list_node *curr;
 	struct mcc_list *container;
 };
 
@@ -50,6 +51,6 @@ mcc_err_t mcc_list_sort(struct mcc_list *self);
 
 mcc_err_t mcc_list_iter_init(struct mcc_list *self, struct mcc_list_iter *iter);
 
-bool mcc_list_iter_next(struct mcc_list_iter *iter, void *result);
+bool mcc_list_iter_next(struct mcc_list_iter *self, void *result);
 
 #endif /* _MCC_LIST_H */

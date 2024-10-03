@@ -9,13 +9,13 @@ struct mcc_iterator_interface {
 	mcc_iterator_next_fn next;
 };
 
-struct mcc_iterator {
+struct mcc_iter {
 	const struct mcc_iterator_interface *iter_intf;
 };
 
 static inline const struct mcc_iterator_interface *mcc_iter_intf_of(void *self)
 {
-	return ((struct mcc_iterator *)self)->iter_intf;
+	return ((struct mcc_iter *)self)->iter_intf;
 }
 
 static inline bool mcc_iter_next(void *self, void *result)

@@ -411,25 +411,30 @@ mcc_err_t mcc_list_sort(struct mcc_list *self)
 	return OK;
 }
 
+static const struct mcc_iterator_interface mcc_list_iter_intf = {
+	.next = (mcc_iterator_next_fn)&mcc_list_iter_next,
+};
+
 mcc_err_t mcc_list_iter_init(struct mcc_list *self, struct mcc_list_iter *iter)
 {
 	if (!self || !iter)
 		return INVALID_ARGUMENTS;
 
-	iter->interface.next = (mcc_iterator_next_fn)&mcc_list_iter_next;
-	iter->current = self->head;
+	iter->base.iter_intf = &mcc_list_iter_intf;
+	iter->curr = self->head;
 	iter->container = self;
 	return OK;
 }
 
-bool mcc_list_iter_next(struct mcc_list_iter *iter, void *result)
+bool mcc_list_iter_next(struct mcc_list_iter *self, void *result)
 {
-	if (!iter || !iter->current)
+	if (!self || !result)
 		return false;
 
-	if (result)
-		memcpy(result, value_of(iter->current),
-		       iter->container->T->size);
-	iter->current = iter->current->next;
+	if (!self->curr)
+		return false;
+
+	memcpy(result, value_of(self->curr), self->container->T->size);
+	self->curr = self->curr->next;
 	return true;
 }

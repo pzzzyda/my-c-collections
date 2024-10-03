@@ -314,7 +314,7 @@ mcc_err_t mcc_vector_iter_init(struct mcc_vector *self,
 	if (!self || !iter)
 		return INVALID_ARGUMENTS;
 
-	iter->iter_intf = &mcc_vector_iter_intf;
+	iter->base.iter_intf = &mcc_vector_iter_intf;
 	iter->idx = 0;
 	iter->container = self;
 	return OK;
