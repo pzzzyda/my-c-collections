@@ -37,6 +37,9 @@ mcc_err_t mcc_hash_map_get(struct mcc_hash_map *self, const void *key,
 
 void *mcc_hash_map_get_ptr(struct mcc_hash_map *self, const void *key);
 
+mcc_err_t mcc_hash_map_get_key_value(struct mcc_hash_map *self, const void *key,
+				     struct mcc_kv_pair *pair);
+
 size_t mcc_hash_map_capacity(struct mcc_hash_map *self);
 
 size_t mcc_hash_map_len(struct mcc_hash_map *self);

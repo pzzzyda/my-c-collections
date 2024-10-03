@@ -25,6 +25,15 @@ int test_str_key_int_value(void)
 	mcc_hash_map_insert(map, &(mcc_str_t){"Strawberry"}, &(int){8});
 	mcc_hash_map_insert(map, &(mcc_str_t){"Grape"}, &(int){9});
 
+	mcc_hash_map_get_key_value(map, &(mcc_str_t){"Watermelon"}, &pair);
+	printf("%s = %d\n", key, value);
+
+	mcc_hash_map_get_key_value(map, &(mcc_str_t){"Grape"}, &pair);
+	printf("%s = %d\n", key, value);
+
+	mcc_hash_map_get_key_value(map, &(mcc_str_t){"Pineapple"}, &pair);
+	printf("%s = %d\n", key, value);
+
 	puts("Raw data");
 	mcc_hash_map_iter_init(map, &iter);
 	while (mcc_iter_next(&iter, &pair))

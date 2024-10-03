@@ -305,6 +305,28 @@ void *mcc_hash_map_get_ptr(struct mcc_hash_map *self, const void *key)
 	return NULL;
 }
 
+mcc_err_t mcc_hash_map_get_key_value(struct mcc_hash_map *self, const void *key,
+				     struct mcc_kv_pair *pair)
+{
+	size_t index;
+	struct mcc_hash_entry *curr;
+
+	if (!self || !key)
+		return INVALID_ARGUMENTS;
+
+	index = self->K->hash(key) & (self->cap - 1);
+	curr = self->buckets[index];
+	while (curr) {
+		if (self->K->cmp(key, curr->key) == 0) {
+			memcpy(pair->key, curr->key, self->K->size);
+			memcpy(pair->value, value_of(curr), self->V->size);
+			return OK;
+		}
+		curr = curr->next;
+	}
+	return NONE;
+}
+
 size_t mcc_hash_map_capacity(struct mcc_hash_map *self)
 {
 	return !self ? 0 : self->cap;
