@@ -87,3 +87,9 @@ test_%: ./build/unit_test/test_%.out
 ./build/unit_test/mcc_array.o
 	@mkdir -p $(dir $@)
 	@$(CC) $^ -o $@
+
+./build/unit_test/test_hash_set.out: ./build/unit_test/test_hash_set.o \
+./build/unit_test/mcc_object.o ./build/unit_test/mcc_hash_map.o \
+./build/unit_test/mcc_hash_set.o
+	@mkdir -p $(dir $@)
+	@$(CC) $^ -o $@
