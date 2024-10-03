@@ -1,26 +1,18 @@
 #include "mcc_rb_map.h"
-#include "mcc_utils.h"
 #include "mcc_vector.h"
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 
-struct A {
-	int x;
-	int y;
-};
-
-int foo(struct A *a)
+int test_str_key_int_value(void)
 {
-	return a->x + a->y;
-}
-
-static int test_str_key_int_value(void)
-{
-	struct mcc_rb_map *map;
+	printf("%s\n", __FUNCTION__);
 	struct mcc_rb_map_iter iter;
-
-	map = mcc_rb_map_new(STR, INT);
+	const char *key;
+	int value;
+	struct mcc_kv_pair pair = {&key, &value};
+	struct mcc_rb_map *map = mcc_rb_map_new(STR, INT);
 
 	mcc_rb_map_insert(map, &(mcc_str_t){"A"}, &(int){'A'});
 	mcc_rb_map_insert(map, &(mcc_str_t){"E"}, &(int){'E'});
@@ -38,14 +30,9 @@ static int test_str_key_int_value(void)
 	mcc_rb_map_insert(map, &(mcc_str_t){"v"}, &(int){'v'});
 	mcc_rb_map_insert(map, &(mcc_str_t){"K"}, &(int){'K'});
 
-	printf("len = %ld\n", mcc_rb_map_len(map));
-
 	mcc_rb_map_iter_init(map, &iter);
-	for (struct mcc_kv_pair pair; mcc_rb_map_iter_next(&iter, &pair);) {
-		mcc_str_t *k = pair.key;
-		int *v = pair.value;
-		printf("(%s, %d)\n", *k, *v);
-	}
+	while (mcc_iter_next(&iter, &pair))
+		printf("(%s, %d)\n", key, value);
 
 	mcc_rb_map_remove(map, &(mcc_str_t){"C"});
 	mcc_rb_map_remove(map, &(mcc_str_t){"b"});
@@ -54,80 +41,77 @@ static int test_str_key_int_value(void)
 	puts("Removed 'C', 'Z', 'b' ");
 
 	mcc_rb_map_iter_init(map, &iter);
-	for (struct mcc_kv_pair pair; mcc_rb_map_iter_next(&iter, &pair);) {
-		mcc_str_t *k = pair.key;
-		int *v = pair.value;
-		printf("(%s, %d)\n", *k, *v);
-	}
-
-	mcc_rb_map_clear(map);
-
-	puts("Clear the map");
-
-	mcc_rb_map_iter_init(map, &iter);
-	for (struct mcc_kv_pair pair; mcc_rb_map_iter_next(&iter, &pair);) {
-		mcc_str_t *k = pair.key;
-		int *v = pair.value;
-		printf("(%s, %d)\n", *k, *v);
-	}
+	while (mcc_iter_next(&iter, &pair))
+		printf("(%s, %d)\n", key, value);
 
 	mcc_rb_map_delete(map);
+	puts("testing done");
 	return 0;
 }
 
-static int test_str_key_vector_value(void)
+void print_int_vector(struct mcc_vector *vec, const char *fmt, ...)
 {
-	struct mcc_rb_map *map;
-	struct mcc_vector *tmp;
+	struct mcc_vector_iter iter;
+	va_list args;
+
+	va_start(args, fmt);
+	vprintf(fmt, args);
+	va_end(args);
+
+	mcc_vector_iter_init(vec, &iter);
+	printf("[ ");
+	for (int i; mcc_iter_next(&iter, &i); i++)
+		printf("%d ", i);
+	printf("]\n");
+}
+
+int test_str_key_vector_value(void)
+{
+	printf("%s\n", __FUNCTION__);
 	struct mcc_rb_map_iter iter;
+	const char *key;
+	struct mcc_vector *value;
+	struct mcc_kv_pair pair = {&key, &value};
+	struct mcc_rb_map *map = mcc_rb_map_new(STR, MCC_VECTOR);
 
-	map = mcc_rb_map_new(STR, MCC_VECTOR);
-
-	tmp = mcc_vector_new(INT);
-	mcc_rb_map_insert(map, &(mcc_str_t){"a021be"}, &tmp);
-	tmp = mcc_vector_new(INT);
-	mcc_rb_map_insert(map, &(mcc_str_t){"92b341"}, &tmp);
-	tmp = mcc_vector_new(INT);
-	mcc_rb_map_insert(map, &(mcc_str_t){"891b7a"}, &tmp);
-	tmp = mcc_vector_new(INT);
-	mcc_rb_map_insert(map, &(mcc_str_t){"5ab362"}, &tmp);
-	tmp = mcc_vector_new(INT);
-	mcc_rb_map_insert(map, &(mcc_str_t){"1bf2e0"}, &tmp);
+	value = mcc_vector_new(INT);
+	mcc_rb_map_insert(map, &(mcc_str_t){"a021be"}, &value);
+	value = mcc_vector_new(INT);
+	mcc_rb_map_insert(map, &(mcc_str_t){"92b341"}, &value);
+	value = mcc_vector_new(INT);
+	mcc_rb_map_insert(map, &(mcc_str_t){"891b7a"}, &value);
+	value = mcc_vector_new(INT);
+	mcc_rb_map_insert(map, &(mcc_str_t){"5ab362"}, &value);
+	value = mcc_vector_new(INT);
+	mcc_rb_map_insert(map, &(mcc_str_t){"1bf2e0"}, &value);
 
 	mcc_rb_map_iter_init(map, &iter);
 	srand(time(NULL));
-	for (struct mcc_kv_pair pair; mcc_rb_map_iter_next(&iter, &pair);) {
-		tmp = *(struct mcc_vector **)pair.value;
-		mcc_vector_push(tmp, &(int){rand() % 100});
-		mcc_vector_push(tmp, &(int){rand() % 100});
-		mcc_vector_push(tmp, &(int){rand() % 100});
-		mcc_vector_push(tmp, &(int){rand() % 100});
-		mcc_vector_push(tmp, &(int){rand() % 100});
+	while (mcc_iter_next(&iter, &pair)) {
+		mcc_vector_push(value, &(int){rand() % 100});
+		mcc_vector_push(value, &(int){rand() % 100});
+		mcc_vector_push(value, &(int){rand() % 100});
+		mcc_vector_push(value, &(int){rand() % 100});
+		mcc_vector_push(value, &(int){rand() % 100});
+		mcc_vector_push(value, &(int){rand() % 100});
+		mcc_vector_push(value, &(int){rand() % 100});
+		mcc_vector_push(value, &(int){rand() % 100});
+		mcc_vector_push(value, &(int){rand() % 100});
+		mcc_vector_push(value, &(int){rand() % 100});
 	}
 
-	putchar('\n');
 	mcc_rb_map_iter_init(map, &iter);
-	for (struct mcc_kv_pair pair; mcc_rb_map_iter_next(&iter, &pair);) {
-		mcc_str_t *k = pair.key;
-		tmp = *(struct mcc_vector **)pair.value;
-
-		printf("%s: ", *k);
-
-		size_t len = mcc_vector_len(tmp);
-		for (size_t i = 0; i < len; i++) {
-			int t;
-			mcc_vector_get(tmp, i, &t);
-			printf("%2d ", t);
-		}
-		putchar('\n');
+	while (mcc_iter_next(&iter, &pair)) {
+		mcc_vector_sort(value);
+		print_int_vector(value, "%s: ", key);
 	}
 
 	mcc_rb_map_delete(map);
-
+	puts("testing done");
 	return 0;
 }
 
-int main(int argc, char **argv)
+int main(void)
 {
 	test_str_key_int_value();
 	test_str_key_vector_value();

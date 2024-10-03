@@ -653,49 +653,54 @@ bool mcc_rb_map_is_empty(struct mcc_rb_map *self)
 	return !self ? true : self->len == 0;
 }
 
+static const struct mcc_iterator_interface mcc_rb_map_iter_intf = {
+	.next = (mcc_iterator_next_fn)&mcc_rb_map_iter_next,
+};
+
 mcc_err_t mcc_rb_map_iter_init(struct mcc_rb_map *self,
 			       struct mcc_rb_map_iter *iter)
 {
 	if (!self || !iter)
 		return INVALID_ARGUMENTS;
 
-	iter->interface.next = (mcc_iterator_next_fn)&mcc_rb_map_iter_next;
-	iter->current = self->root;
-	while (iter->current && iter->current->left)
-		iter->current = iter->current->left;
+	iter->base.iter_intf = &mcc_rb_map_iter_intf;
+	iter->curr = self->root;
+	while (iter->curr && iter->curr->left)
+		iter->curr = iter->curr->left;
 	iter->container = self;
 	return OK;
 }
 
-bool mcc_rb_map_iter_next(struct mcc_rb_map_iter *iter,
+bool mcc_rb_map_iter_next(struct mcc_rb_map_iter *self,
 			  struct mcc_kv_pair *result)
 {
 	struct mcc_rb_node *curr, *tmp;
 	mcc_compare_fn cmp;
 
-	if (!iter || !iter->current)
+	if (!self || !result)
 		return false;
 
-	curr = iter->current;
+	if (!self->curr)
+		return false;
 
-	if (result) {
-		result->key = iter->current->key;
-		result->value = value_of(iter->current);
-	}
+	curr = self->curr;
+
+	memcpy(result->key, curr->key, self->container->K->size);
+	memcpy(result->value, value_of(curr), self->container->V->size);
 
 	if (curr->right) {
 		/* Find the successor. */
 		tmp = curr->right;
 		while (tmp->left)
 			tmp = tmp->left;
-		iter->current = tmp;
+		self->curr = tmp;
 	} else {
 		tmp = curr->parent;
-		cmp = iter->container->K->cmp;
+		cmp = self->container->K->cmp;
 
 		while (tmp && cmp(tmp->key, curr->key) <= 0)
 			tmp = tmp->parent;
-		iter->current = tmp;
+		self->curr = tmp;
 	}
 	return true;
 }

@@ -14,8 +14,9 @@ struct mcc_rb_node;
 #define MCC_RB_BLACK 1
 
 struct mcc_rb_map_iter {
-	struct mcc_iterator_interface interface;
-	struct mcc_rb_node *current;
+	struct mcc_iter base;
+
+	struct mcc_rb_node *curr;
 	struct mcc_rb_map *container;
 };
 
@@ -42,7 +43,7 @@ bool mcc_rb_map_is_empty(struct mcc_rb_map *self);
 mcc_err_t mcc_rb_map_iter_init(struct mcc_rb_map *self,
 			       struct mcc_rb_map_iter *iter);
 
-bool mcc_rb_map_iter_next(struct mcc_rb_map_iter *iter,
+bool mcc_rb_map_iter_next(struct mcc_rb_map_iter *self,
 			  struct mcc_kv_pair *result);
 
 #endif /* _MCC_RB_MAP_H */
