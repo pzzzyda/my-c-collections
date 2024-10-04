@@ -9,6 +9,7 @@ my-c-collections is a simple generic container library implemented in C.
 | `mcc_hash_map` | A hash map. |
 | `mcc_rb_set` | An ordered set based on mcc_rb_map |
 | `mcc_hash_set` | A hash set based on mcc_hash_map |
+| `mcc_priority_queue` | A priority queue implemented using a binary heap |
 ### Install
 ```bash
 sudo make install
