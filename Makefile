@@ -99,3 +99,9 @@ test_%: ./build/unit_test/test_%.out
 ./build/unit_test/mcc_rb_set.o
 	@mkdir -p $(dir $@)
 	@$(CC) $^ -o $@
+
+./build/unit_test/test_priority_queue.out: ./build/unit_test/mcc_array.o\
+./build/unit_test/test_priority_queue.o ./build/unit_test/mcc_object.o \
+./build/unit_test/mcc_vector.o ./build/unit_test/mcc_priority_queue.o
+	@mkdir -p $(dir $@)
+	@$(CC) $^ -o $@
