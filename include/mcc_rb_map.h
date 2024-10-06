@@ -10,12 +10,8 @@ struct mcc_rb_map;
 
 struct mcc_rb_node;
 
-#define MCC_RB_RED 0
-#define MCC_RB_BLACK 1
-
 struct mcc_rb_map_iter {
 	struct mcc_iter base;
-
 	struct mcc_rb_node *curr;
 	struct mcc_rb_map *container;
 };

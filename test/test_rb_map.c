@@ -11,6 +11,7 @@ int test_str_key_int_value(void)
 	struct mcc_rb_map_iter iter;
 	const char *key;
 	int value;
+	int *ptr;
 	struct mcc_kv_pair pair = {&key, &value};
 	struct mcc_rb_map *map = mcc_rb_map_new(STR, INT);
 
@@ -38,7 +39,10 @@ int test_str_key_int_value(void)
 	mcc_rb_map_remove(map, &(mcc_str_t){"b"});
 	mcc_rb_map_remove(map, &(mcc_str_t){"Z"});
 
-	puts("Removed 'C', 'Z', 'b' ");
+	ptr = mcc_rb_map_get_ptr(map, &(mcc_str_t){"w"});
+	*ptr = 1000;
+
+	puts("Removed 'C', 'Z', 'b' and changed the value of 'w' to 1000");
 
 	mcc_rb_map_iter_init(map, &iter);
 	while (mcc_iter_next(&iter, &pair))
