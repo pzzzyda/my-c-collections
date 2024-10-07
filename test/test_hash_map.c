@@ -11,6 +11,7 @@ int test_str_key_int_value(void)
 	struct mcc_hash_map_iter iter;
 	const char *key;
 	int value;
+	int *ptr;
 	struct mcc_kv_pair pair = {&key, &value};
 	struct mcc_hash_map *map = mcc_hash_map_new(STR, INT);
 
@@ -38,6 +39,10 @@ int test_str_key_int_value(void)
 	mcc_hash_map_iter_init(map, &iter);
 	while (mcc_iter_next(&iter, &pair))
 		printf("(%s, %d)\n", key, value);
+
+	puts("Change the value of 'Watermelon' to 1000");
+	ptr = mcc_hash_map_get_ptr(map, &(mcc_str_t){"Watermelon"});
+	*ptr = 1000;
 
 	puts("Removed Pineapple");
 	mcc_hash_map_remove(map, &(mcc_str_t){"Pineapple"});
