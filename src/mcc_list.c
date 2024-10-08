@@ -53,31 +53,26 @@ static inline void *value_of(struct mcc_list_node *self)
 	return (uint8_t *)self + sizeof(struct mcc_list_node);
 }
 
-static struct mcc_list_node *node_new(const void *value,
-				      const struct mcc_object_interface *T)
+static struct mcc_list_node *create_node(const void *value, size_t size)
 {
-	struct mcc_list_node *self;
-	size_t n = 0;
+	struct mcc_list_node *node;
 
-	n += sizeof(struct mcc_list_node);
-	n += T->size;
-	self = calloc(1, n);
-	if (!self)
+	node = calloc(1, sizeof(struct mcc_list_node) + size);
+	if (!node)
 		return NULL;
 
-	memcpy(value_of(self), value, T->size);
-	return self;
+	memcpy(value_of(node), value, size);
+	return node;
 }
 
-static void node_delete(struct mcc_list_node *self,
-			const struct mcc_object_interface *T)
+static void destroy_node(struct mcc_list_node *node, const mcc_destruct_fn dtor)
 {
-	if (T->dtor)
-		T->dtor(value_of(self));
-	free(self);
+	if (dtor)
+		dtor(value_of(node));
+	free(node);
 }
 
-static inline struct mcc_list_node *get_nth(struct mcc_list *self, size_t index)
+static struct mcc_list_node *get_nth(struct mcc_list *self, size_t index)
 {
 	struct mcc_list_node *curr;
 	size_t i;
@@ -95,14 +90,13 @@ static inline struct mcc_list_node *get_nth(struct mcc_list *self, size_t index)
 	return curr;
 }
 
-static inline mcc_err_t insert(struct mcc_list *self, size_t index,
-			       const void *value)
+static mcc_err_t insert(struct mcc_list *self, size_t index, const void *value)
 {
 	struct mcc_list_node *curr, *new_node;
 
 	curr = get_nth(self, index);
 
-	new_node = node_new(value, self->T);
+	new_node = create_node(value, self->T->size);
 	if (!new_node)
 		return CANNOT_ALLOCATE_MEMORY;
 
@@ -115,7 +109,7 @@ static inline mcc_err_t insert(struct mcc_list *self, size_t index,
 	return OK;
 }
 
-static inline void remove(struct mcc_list *self, size_t index)
+static void remove(struct mcc_list *self, size_t index)
 {
 	struct mcc_list_node *curr;
 
@@ -124,7 +118,7 @@ static inline void remove(struct mcc_list *self, size_t index)
 	curr->next->prev = curr->prev;
 	curr->prev->next = curr->next;
 
-	node_delete(curr, self->T);
+	destroy_node(curr, self->T->dtor);
 	self->len--;
 }
 
@@ -159,7 +153,7 @@ mcc_err_t mcc_list_push_front(struct mcc_list *self, const void *value)
 	if (!self || !value)
 		return INVALID_ARGUMENTS;
 
-	new_node = node_new(value, self->T);
+	new_node = create_node(value, self->T->size);
 	if (!new_node)
 		return CANNOT_ALLOCATE_MEMORY;
 
@@ -182,7 +176,7 @@ mcc_err_t mcc_list_push_back(struct mcc_list *self, const void *value)
 	if (!self || !value)
 		return INVALID_ARGUMENTS;
 
-	new_node = node_new(value, self->T);
+	new_node = create_node(value, self->T->size);
 	if (!new_node)
 		return CANNOT_ALLOCATE_MEMORY;
 
@@ -209,7 +203,7 @@ void mcc_list_pop_front(struct mcc_list *self)
 		tmp = self->head;
 		self->head = self->head->next;
 
-		node_delete(tmp, self->T);
+		destroy_node(tmp, self->T->dtor);
 
 		if (self->head)
 			self->head->prev = NULL;
@@ -230,7 +224,7 @@ void mcc_list_pop_back(struct mcc_list *self)
 		tmp = self->tail;
 		self->tail = self->tail->prev;
 
-		node_delete(tmp, self->T);
+		destroy_node(tmp, self->T->dtor);
 
 		if (self->tail)
 			self->tail->next = NULL;
@@ -277,7 +271,7 @@ void mcc_list_clear(struct mcc_list *self)
 
 	while (self->head) {
 		self->tail = self->head->next;
-		node_delete(self->head, self->T);
+		destroy_node(self->head, self->T->dtor);
 		self->head = self->tail;
 		self->len--;
 	}
@@ -350,28 +344,46 @@ static struct mcc_list_node *split(struct mcc_list_node *head)
 	return slow;
 }
 
-static inline void merge(struct mcc_list_node *a, struct mcc_list_node *b,
-			 struct mcc_list_node *res, mcc_compare_fn cmp)
+static void merge(struct mcc_list_node *a, struct mcc_list_node *b,
+		  struct mcc_list_node *result, mcc_compare_fn cmp)
 {
 	struct mcc_list_node *tmp = NULL;
 
-	while (a || b) {
-		if (!b || (a && cmp(value_of(a), value_of(b)) < 0)) {
-			tmp = a;
-			a = a->next;
+	while (a->head && b->head) {
+		if (cmp(value_of(a->head), value_of(b->head)) <= 0) {
+			tmp = a->head;
+			a->head = a->head->next;
 		} else {
-			tmp = b;
-			b = b->next;
+			tmp = b->head;
+			b->head = b->head->next;
 		}
 
-		if (!res->head) {
-			tmp->prev = tmp->next = NULL;
-			res->head = res->tail = tmp;
+		if (!result->tail) {
+			result->tail = result->head = tmp;
 		} else {
-			res->tail->next = tmp;
-			tmp->prev = res->tail;
-			tmp->next = NULL;
-			res->tail = tmp;
+			result->tail->next = tmp;
+			tmp->prev = result->tail;
+			result->tail = tmp;
+		}
+	}
+
+	if (a->head) {
+		if (!result->tail) {
+			*result = *a;
+		} else {
+			result->tail->next = a->head;
+			a->head->prev = result->tail;
+			result->tail = a->tail;
+		}
+	}
+
+	if (b->head) {
+		if (!result->tail) {
+			*result = *b;
+		} else {
+			result->tail->next = b->head;
+			b->head->prev = result->tail;
+			result->tail = b->tail;
 		}
 	}
 }
@@ -392,7 +404,7 @@ static void merge_sort(struct mcc_list_node *head, struct mcc_list_node *result,
 	mid = split(head);
 	merge_sort(head, &left, cmp);
 	merge_sort(mid, &right, cmp);
-	merge(left.head, right.head, result, cmp);
+	merge(&left, &right, result, cmp);
 }
 
 mcc_err_t mcc_list_sort(struct mcc_list *self)
