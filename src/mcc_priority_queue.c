@@ -1,5 +1,6 @@
 #include "mcc_priority_queue.h"
 #include "base/mcc_array.h"
+#include "mcc_err.h"
 #include <stdlib.h>
 
 struct mcc_priority_queue {
@@ -81,8 +82,8 @@ void mcc_priority_queue_delete(struct mcc_priority_queue *self)
 	free(self);
 }
 
-mcc_err_t mcc_priority_queue_reserve(struct mcc_priority_queue *self,
-				     size_t additional)
+int mcc_priority_queue_reserve(struct mcc_priority_queue *self,
+			       size_t additional)
 {
 	mcc_array_t *new_buf;
 
@@ -97,8 +98,7 @@ mcc_err_t mcc_priority_queue_reserve(struct mcc_priority_queue *self,
 	return OK;
 }
 
-mcc_err_t mcc_priority_queue_push(struct mcc_priority_queue *self,
-				  const void *value)
+int mcc_priority_queue_push(struct mcc_priority_queue *self, const void *value)
 {
 	size_t i;
 
@@ -153,7 +153,7 @@ void mcc_priority_queue_clear(struct mcc_priority_queue *self)
 	}
 }
 
-mcc_err_t mcc_priority_queue_front(struct mcc_priority_queue *self, void *value)
+int mcc_priority_queue_front(struct mcc_priority_queue *self, void *value)
 {
 	if (!self || !value)
 		return INVALID_ARGUMENTS;

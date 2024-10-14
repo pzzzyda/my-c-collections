@@ -14,16 +14,16 @@ struct mcc_hash_set *mcc_hash_set_new(const struct mcc_object_interface *T);
 
 void mcc_hash_set_delete(struct mcc_hash_set *self);
 
-mcc_err_t mcc_hash_set_reserve(struct mcc_hash_set *self, size_t additional);
+int mcc_hash_set_reserve(struct mcc_hash_set *self, size_t additional);
 
-mcc_err_t mcc_hash_set_insert(struct mcc_hash_set *self, const void *value);
+int mcc_hash_set_insert(struct mcc_hash_set *self, const void *value);
 
 void mcc_hash_set_remove(struct mcc_hash_set *self, const void *value);
 
 void mcc_hash_set_clear(struct mcc_hash_set *self);
 
-mcc_err_t mcc_hash_set_get(struct mcc_hash_set *self, const void *value,
-			   void *result);
+int mcc_hash_set_get(struct mcc_hash_set *self, const void *value,
+		     void *result);
 
 size_t mcc_hash_set_capacity(struct mcc_hash_set *self);
 
@@ -31,8 +31,8 @@ size_t mcc_hash_set_len(struct mcc_hash_set *self);
 
 bool mcc_hash_set_is_empty(struct mcc_hash_set *self);
 
-mcc_err_t mcc_hash_set_iter_init(struct mcc_hash_set *self,
-				 struct mcc_hash_set_iter *iter);
+int mcc_hash_set_iter_init(struct mcc_hash_set *self,
+			   struct mcc_hash_set_iter *iter);
 
 bool mcc_hash_set_iter_next(struct mcc_hash_set_iter *self, void *result);
 

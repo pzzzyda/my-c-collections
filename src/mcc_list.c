@@ -1,4 +1,5 @@
 #include "mcc_list.h"
+#include "mcc_err.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -90,7 +91,7 @@ static struct mcc_list_node *get_nth(struct mcc_list *self, size_t index)
 	return curr;
 }
 
-static mcc_err_t insert(struct mcc_list *self, size_t index, const void *value)
+static int insert(struct mcc_list *self, size_t index, const void *value)
 {
 	struct mcc_list_node *curr, *new_node;
 
@@ -146,7 +147,7 @@ void mcc_list_delete(struct mcc_list *self)
 	free(self);
 }
 
-mcc_err_t mcc_list_push_front(struct mcc_list *self, const void *value)
+int mcc_list_push_front(struct mcc_list *self, const void *value)
 {
 	struct mcc_list_node *new_node;
 
@@ -169,7 +170,7 @@ mcc_err_t mcc_list_push_front(struct mcc_list *self, const void *value)
 	return OK;
 }
 
-mcc_err_t mcc_list_push_back(struct mcc_list *self, const void *value)
+int mcc_list_push_back(struct mcc_list *self, const void *value)
 {
 	struct mcc_list_node *new_node;
 
@@ -234,8 +235,7 @@ void mcc_list_pop_back(struct mcc_list *self)
 	}
 }
 
-mcc_err_t mcc_list_insert(struct mcc_list *self, size_t index,
-			  const void *value)
+int mcc_list_insert(struct mcc_list *self, size_t index, const void *value)
 {
 	if (!self || !value)
 		return INVALID_ARGUMENTS;
@@ -277,7 +277,7 @@ void mcc_list_clear(struct mcc_list *self)
 	}
 }
 
-mcc_err_t mcc_list_front(struct mcc_list *self, void *value)
+int mcc_list_front(struct mcc_list *self, void *value)
 {
 	if (!self || !value)
 		return INVALID_ARGUMENTS;
@@ -294,7 +294,7 @@ void *mcc_list_front_ptr(struct mcc_list *self)
 	return !self || !self->len ? NULL : value_of(self->head);
 }
 
-mcc_err_t mcc_list_back(struct mcc_list *self, void *value)
+int mcc_list_back(struct mcc_list *self, void *value)
 {
 	if (!self || !value)
 		return INVALID_ARGUMENTS;
@@ -407,7 +407,7 @@ static void merge_sort(struct mcc_list_node *head, struct mcc_list_node *result,
 	merge(&left, &right, result, cmp);
 }
 
-mcc_err_t mcc_list_sort(struct mcc_list *self)
+int mcc_list_sort(struct mcc_list *self)
 {
 	struct mcc_list_node sorted = {0};
 
@@ -427,7 +427,7 @@ static const struct mcc_iterator_interface mcc_list_iter_intf = {
 	.next = (mcc_iterator_next_fn)&mcc_list_iter_next,
 };
 
-mcc_err_t mcc_list_iter_init(struct mcc_list *self, struct mcc_list_iter *iter)
+int mcc_list_iter_init(struct mcc_list *self, struct mcc_list_iter *iter)
 {
 	if (!self || !iter)
 		return INVALID_ARGUMENTS;

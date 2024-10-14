@@ -1,4 +1,5 @@
 #include "mcc_rb_set.h"
+#include "mcc_err.h"
 #include <stdlib.h>
 
 struct mcc_rb_set {
@@ -37,7 +38,7 @@ void mcc_rb_set_delete(struct mcc_rb_set *self)
 	free(self);
 }
 
-mcc_err_t mcc_rb_set_insert(struct mcc_rb_set *self, const void *value)
+int mcc_rb_set_insert(struct mcc_rb_set *self, const void *value)
 {
 	int none = 0;
 
@@ -63,8 +64,7 @@ void mcc_rb_set_clear(struct mcc_rb_set *self)
 	mcc_rb_map_clear(self->data);
 }
 
-mcc_err_t mcc_rb_set_get(struct mcc_rb_set *self, const void *value,
-			 void *result)
+int mcc_rb_set_get(struct mcc_rb_set *self, const void *value, void *result)
 {
 	int none = 0;
 	struct mcc_kv_pair pair = {result, &none};
@@ -89,8 +89,7 @@ static const struct mcc_iterator_interface mcc_rb_set_iter_intf = {
 	.next = (mcc_iterator_next_fn)&mcc_rb_set_iter_next,
 };
 
-mcc_err_t mcc_rb_set_iter_init(struct mcc_rb_set *self,
-			       struct mcc_rb_set_iter *iter)
+int mcc_rb_set_iter_init(struct mcc_rb_set *self, struct mcc_rb_set_iter *iter)
 {
 	if (!self)
 		return INVALID_ARGUMENTS;

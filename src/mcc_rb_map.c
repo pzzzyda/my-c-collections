@@ -1,4 +1,5 @@
 #include "mcc_rb_map.h"
+#include "mcc_err.h"
 #include <stdlib.h>
 
 #define MCC_RB_RED false
@@ -515,8 +516,8 @@ void mcc_rb_map_clear(struct mcc_rb_map *self)
 	self->len = 0;
 }
 
-mcc_err_t mcc_rb_map_insert(struct mcc_rb_map *self, const void *key,
-			    const void *value)
+int mcc_rb_map_insert(struct mcc_rb_map *self, const void *key,
+		      const void *value)
 {
 	struct mcc_rb_node **node, *parent;
 
@@ -591,7 +592,7 @@ void mcc_rb_map_remove(struct mcc_rb_map *self, const void *key)
 	self->len -= 1;
 }
 
-mcc_err_t mcc_rb_map_get(struct mcc_rb_map *self, const void *key, void *value)
+int mcc_rb_map_get(struct mcc_rb_map *self, const void *key, void *value)
 {
 	struct mcc_rb_node **node;
 
@@ -608,8 +609,8 @@ mcc_err_t mcc_rb_map_get(struct mcc_rb_map *self, const void *key, void *value)
 	}
 }
 
-mcc_err_t mcc_rb_map_get_key_value(struct mcc_rb_map *self, const void *key,
-				   struct mcc_kv_pair *pair)
+int mcc_rb_map_get_key_value(struct mcc_rb_map *self, const void *key,
+			     struct mcc_kv_pair *pair)
 {
 	struct mcc_rb_node **node;
 
@@ -656,8 +657,7 @@ static const struct mcc_iterator_interface mcc_rb_map_iter_intf = {
 	.next = (mcc_iterator_next_fn)&mcc_rb_map_iter_next,
 };
 
-mcc_err_t mcc_rb_map_iter_init(struct mcc_rb_map *self,
-			       struct mcc_rb_map_iter *iter)
+int mcc_rb_map_iter_init(struct mcc_rb_map *self, struct mcc_rb_map_iter *iter)
 {
 	if (!self || !iter)
 		return INVALID_ARGUMENTS;

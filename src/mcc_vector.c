@@ -1,5 +1,6 @@
 #include "mcc_vector.h"
 #include "base/mcc_array.h"
+#include "mcc_err.h"
 #include <stdlib.h>
 
 struct mcc_vector {
@@ -71,7 +72,7 @@ void mcc_vector_delete(struct mcc_vector *self)
 	free(self);
 }
 
-mcc_err_t mcc_vector_reserve(struct mcc_vector *self, size_t additional)
+int mcc_vector_reserve(struct mcc_vector *self, size_t additional)
 {
 	mcc_array_t *new_buf;
 
@@ -86,7 +87,7 @@ mcc_err_t mcc_vector_reserve(struct mcc_vector *self, size_t additional)
 	return OK;
 }
 
-mcc_err_t mcc_vector_shrink_to_fit(struct mcc_vector *self)
+int mcc_vector_shrink_to_fit(struct mcc_vector *self)
 {
 	mcc_array_t *new_buf;
 
@@ -101,7 +102,7 @@ mcc_err_t mcc_vector_shrink_to_fit(struct mcc_vector *self)
 	return OK;
 }
 
-mcc_err_t mcc_vector_push(struct mcc_vector *self, const void *value)
+int mcc_vector_push(struct mcc_vector *self, const void *value)
 {
 	if (!self || !value)
 		return INVALID_ARGUMENTS;
@@ -126,8 +127,7 @@ void mcc_vector_pop(struct mcc_vector *self)
 	self->len--;
 }
 
-mcc_err_t mcc_vector_insert(struct mcc_vector *self, size_t index,
-			    const void *value)
+int mcc_vector_insert(struct mcc_vector *self, size_t index, const void *value)
 {
 	if (!self || !value)
 		return INVALID_ARGUMENTS;
@@ -178,7 +178,7 @@ void mcc_vector_clear(struct mcc_vector *self)
 	}
 }
 
-mcc_err_t mcc_vector_get(struct mcc_vector *self, size_t index, void *value)
+int mcc_vector_get(struct mcc_vector *self, size_t index, void *value)
 {
 	if (!self || !value)
 		return INVALID_ARGUMENTS;
@@ -198,7 +198,7 @@ void *mcc_vector_get_ptr(struct mcc_vector *self, size_t index)
 		return mcc_array_at(self->buf, index);
 }
 
-mcc_err_t mcc_vector_front(struct mcc_vector *self, void *value)
+int mcc_vector_front(struct mcc_vector *self, void *value)
 {
 	return mcc_vector_get(self, 0, value);
 }
@@ -208,7 +208,7 @@ void *mcc_vector_front_ptr(struct mcc_vector *self)
 	return mcc_vector_get_ptr(self, 0);
 }
 
-mcc_err_t mcc_vector_back(struct mcc_vector *self, void *value)
+int mcc_vector_back(struct mcc_vector *self, void *value)
 {
 	return mcc_vector_get(self, self->len - 1, value);
 }
@@ -233,7 +233,7 @@ bool mcc_vector_is_empty(struct mcc_vector *self)
 	return !self ? true : self->len == 0;
 }
 
-mcc_err_t mcc_vector_swap(struct mcc_vector *self, size_t a, size_t b)
+int mcc_vector_swap(struct mcc_vector *self, size_t a, size_t b)
 {
 	if (!self)
 		return INVALID_ARGUMENTS;
@@ -248,7 +248,7 @@ mcc_err_t mcc_vector_swap(struct mcc_vector *self, size_t a, size_t b)
 	return OK;
 }
 
-mcc_err_t mcc_vector_reverse(struct mcc_vector *self)
+int mcc_vector_reverse(struct mcc_vector *self)
 {
 	size_t i, j;
 
@@ -263,7 +263,7 @@ mcc_err_t mcc_vector_reverse(struct mcc_vector *self)
 	return OK;
 }
 
-mcc_err_t mcc_vector_sort(struct mcc_vector *self)
+int mcc_vector_sort(struct mcc_vector *self)
 {
 	void *elems;
 	size_t elem_nums, elem_size;
@@ -308,8 +308,7 @@ static const struct mcc_iterator_interface mcc_vector_iter_intf = {
 	.next = (mcc_iterator_next_fn)&mcc_vector_iter_next,
 };
 
-mcc_err_t mcc_vector_iter_init(struct mcc_vector *self,
-			       struct mcc_vector_iter *iter)
+int mcc_vector_iter_init(struct mcc_vector *self, struct mcc_vector_iter *iter)
 {
 	if (!self || !iter)
 		return INVALID_ARGUMENTS;

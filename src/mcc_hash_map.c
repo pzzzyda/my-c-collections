@@ -1,4 +1,5 @@
 #include "mcc_hash_map.h"
+#include "mcc_err.h"
 #include <stdlib.h>
 
 struct mcc_hash_entry {
@@ -94,7 +95,7 @@ static void destroy_entry(struct mcc_hash_entry *entry,
 	free(entry);
 }
 
-static mcc_err_t rehash(struct mcc_hash_map *self, size_t new_capacity)
+static int rehash(struct mcc_hash_map *self, size_t new_capacity)
 {
 	struct mcc_hash_entry **new_buckets, *curr, *tmp;
 	size_t i, index;
@@ -170,7 +171,7 @@ void mcc_hash_map_delete(struct mcc_hash_map *self)
 	free(self);
 }
 
-mcc_err_t mcc_hash_map_reserve(struct mcc_hash_map *self, size_t additional)
+int mcc_hash_map_reserve(struct mcc_hash_map *self, size_t additional)
 {
 	size_t new_capacity, needs;
 
@@ -188,8 +189,8 @@ mcc_err_t mcc_hash_map_reserve(struct mcc_hash_map *self, size_t additional)
 	return rehash(self, new_capacity);
 }
 
-mcc_err_t mcc_hash_map_insert(struct mcc_hash_map *self, const void *key,
-			      const void *value)
+int mcc_hash_map_insert(struct mcc_hash_map *self, const void *key,
+			const void *value)
 {
 	struct mcc_hash_entry **entry;
 
@@ -249,8 +250,7 @@ void mcc_hash_map_clear(struct mcc_hash_map *self)
 	self->len = 0;
 }
 
-mcc_err_t mcc_hash_map_get(struct mcc_hash_map *self, const void *key,
-			   void *value)
+int mcc_hash_map_get(struct mcc_hash_map *self, const void *key, void *value)
 {
 	struct mcc_hash_entry **entry;
 
@@ -279,8 +279,8 @@ void *mcc_hash_map_get_ptr(struct mcc_hash_map *self, const void *key)
 	return *entry != NULL ? val_of(*entry) : NULL;
 }
 
-mcc_err_t mcc_hash_map_get_key_value(struct mcc_hash_map *self, const void *key,
-				     struct mcc_kv_pair *pair)
+int mcc_hash_map_get_key_value(struct mcc_hash_map *self, const void *key,
+			       struct mcc_kv_pair *pair)
 {
 	struct mcc_hash_entry **entry;
 
@@ -329,8 +329,8 @@ static inline struct mcc_hash_entry *next_valid_entry(struct mcc_hash_map *map,
 		return NULL;
 }
 
-mcc_err_t mcc_hash_map_iter_init(struct mcc_hash_map *self,
-				 struct mcc_hash_map_iter *iter)
+int mcc_hash_map_iter_init(struct mcc_hash_map *self,
+			   struct mcc_hash_map_iter *iter)
 {
 	if (!self || !iter)
 		return INVALID_ARGUMENTS;
