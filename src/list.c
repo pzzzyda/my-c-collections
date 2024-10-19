@@ -1,5 +1,5 @@
-#include "mcc_list.h"
 #include "mcc_err.h"
+#include "mcc_list.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -14,39 +14,19 @@ struct mcc_list_node {
 	};
 };
 
+struct mcc_list_iter {
+	struct mcc_list_iter *next;
+	struct mcc_list *list;
+	struct mcc_list_node *curr;
+	bool in_use;
+};
+
 struct mcc_list {
 	const struct mcc_object_interface *T;
-
+	struct mcc_list_iter *iters;
 	struct mcc_list_node *head;
 	struct mcc_list_node *tail;
 	size_t len;
-};
-
-static void mcc_list_dtor(void *self)
-{
-	mcc_list_delete(*(struct mcc_list **)self);
-}
-
-static int mcc_list_cmp(const void *self, const void *other)
-{
-	struct mcc_list *const *p1 = self;
-	struct mcc_list *const *p2 = other;
-
-	return SIZE_T->cmp(&(**p1).len, &(**p2).len);
-}
-
-static size_t mcc_list_hash(const void *self)
-{
-	struct mcc_list *const *p = self;
-
-	return SIZE_T->hash(&(**p).len);
-}
-
-const struct mcc_object_interface __mcc_list_obj_intf = {
-	.size = sizeof(struct mcc_list *),
-	.dtor = &mcc_list_dtor,
-	.cmp = &mcc_list_cmp,
-	.hash = &mcc_list_hash,
 };
 
 static inline void *value_of(struct mcc_list_node *self)
@@ -66,10 +46,10 @@ static struct mcc_list_node *create_node(const void *value, size_t size)
 	return node;
 }
 
-static void destroy_node(struct mcc_list_node *node, const mcc_destruct_fn dtor)
+static void destroy_node(struct mcc_list_node *node, const mcc_drop_fn drop)
 {
-	if (dtor)
-		dtor(value_of(node));
+	if (drop)
+		drop(value_of(node));
 	free(node);
 }
 
@@ -91,7 +71,8 @@ static struct mcc_list_node *get_nth(struct mcc_list *self, size_t index)
 	return curr;
 }
 
-static int insert(struct mcc_list *self, size_t index, const void *value)
+static int insert_element(struct mcc_list *self, size_t index,
+			  const void *value)
 {
 	struct mcc_list_node *curr, *new_node;
 
@@ -110,7 +91,7 @@ static int insert(struct mcc_list *self, size_t index, const void *value)
 	return OK;
 }
 
-static void remove(struct mcc_list *self, size_t index)
+static void remove_element(struct mcc_list *self, size_t index)
 {
 	struct mcc_list_node *curr;
 
@@ -119,7 +100,7 @@ static void remove(struct mcc_list *self, size_t index)
 	curr->next->prev = curr->prev;
 	curr->prev->next = curr->next;
 
-	destroy_node(curr, self->T->dtor);
+	destroy_node(curr, self->T->drop);
 	self->len--;
 }
 
@@ -138,12 +119,19 @@ struct mcc_list *mcc_list_new(const struct mcc_object_interface *T)
 	return self;
 }
 
-void mcc_list_delete(struct mcc_list *self)
+void mcc_list_drop(struct mcc_list *self)
 {
+	struct mcc_list_iter *tmp;
+
 	if (!self)
 		return;
 
 	mcc_list_clear(self);
+	while (self->iters) {
+		tmp = self->iters->next;
+		free(self->iters);
+		self->iters = tmp;
+	}
 	free(self);
 }
 
@@ -197,42 +185,32 @@ void mcc_list_pop_front(struct mcc_list *self)
 {
 	struct mcc_list_node *tmp;
 
-	if (!self)
+	if (!self || !self->len)
 		return;
 
-	if (self->len) {
-		tmp = self->head;
-		self->head = self->head->next;
+	tmp = self->head;
+	self->head = self->head->next;
+	if (self->head)
+		self->head->prev = NULL;
+	self->len--;
 
-		destroy_node(tmp, self->T->dtor);
-
-		if (self->head)
-			self->head->prev = NULL;
-		self->len--;
-		if (!self->len)
-			self->tail = NULL;
-	}
+	destroy_node(tmp, self->T->drop);
 }
 
 void mcc_list_pop_back(struct mcc_list *self)
 {
 	struct mcc_list_node *tmp;
 
-	if (!self)
+	if (!self || !self->len)
 		return;
 
-	if (self->len) {
-		tmp = self->tail;
-		self->tail = self->tail->prev;
+	tmp = self->tail;
+	self->tail = self->tail->prev;
+	if (self->tail)
+		self->tail->next = NULL;
+	self->len--;
 
-		destroy_node(tmp, self->T->dtor);
-
-		if (self->tail)
-			self->tail->next = NULL;
-		self->len--;
-		if (!self->len)
-			self->head = NULL;
-	}
+	destroy_node(tmp, self->T->drop);
 }
 
 int mcc_list_insert(struct mcc_list *self, size_t index, const void *value)
@@ -248,7 +226,7 @@ int mcc_list_insert(struct mcc_list *self, size_t index, const void *value)
 	else if (index == self->len)
 		return mcc_list_push_back(self, value);
 	else
-		return insert(self, index, value);
+		return insert_element(self, index, value);
 }
 
 void mcc_list_remove(struct mcc_list *self, size_t index)
@@ -261,7 +239,7 @@ void mcc_list_remove(struct mcc_list *self, size_t index)
 	else if (index == self->len - 1)
 		mcc_list_pop_back(self);
 	else
-		remove(self, index);
+		remove_element(self, index);
 }
 
 void mcc_list_clear(struct mcc_list *self)
@@ -271,44 +249,34 @@ void mcc_list_clear(struct mcc_list *self)
 
 	while (self->head) {
 		self->tail = self->head->next;
-		destroy_node(self->head, self->T->dtor);
+		destroy_node(self->head, self->T->drop);
 		self->head = self->tail;
 		self->len--;
 	}
 }
 
-int mcc_list_front(struct mcc_list *self, void *value)
+int mcc_list_front(struct mcc_list *self, void **ref)
 {
-	if (!self || !value)
+	if (!self || !ref)
 		return INVALID_ARGUMENTS;
 
 	if (!self->len)
 		return NONE;
 
-	memcpy(value, value_of(self->head), self->T->size);
+	*ref = value_of(self->head);
 	return OK;
 }
 
-void *mcc_list_front_ptr(struct mcc_list *self)
+int mcc_list_back(struct mcc_list *self, void **ref)
 {
-	return !self || !self->len ? NULL : value_of(self->head);
-}
-
-int mcc_list_back(struct mcc_list *self, void *value)
-{
-	if (!self || !value)
+	if (!self || !ref)
 		return INVALID_ARGUMENTS;
 
 	if (!self->len)
 		return NONE;
 
-	memcpy(value, value_of(self->tail), self->T->size);
+	*ref = value_of(self->tail);
 	return OK;
-}
-
-void *mcc_list_back_ptr(struct mcc_list *self)
-{
-	return !self || !self->len ? NULL : value_of(self->tail);
 }
 
 size_t mcc_list_len(struct mcc_list *self)
@@ -423,30 +391,45 @@ int mcc_list_sort(struct mcc_list *self)
 	return OK;
 }
 
-static const struct mcc_iterator_interface mcc_list_iter_intf = {
-	.next = (mcc_iterator_next_fn)&mcc_list_iter_next,
-};
-
-int mcc_list_iter_init(struct mcc_list *self, struct mcc_list_iter *iter)
+struct mcc_list_iter *mcc_list_iter_new(struct mcc_list *list)
 {
-	if (!self || !iter)
-		return INVALID_ARGUMENTS;
+	struct mcc_list_iter *self;
 
-	iter->base.iter_intf = &mcc_list_iter_intf;
-	iter->curr = self->head;
-	iter->container = self;
-	return OK;
+	if (!list)
+		return NULL;
+
+	self = list->iters;
+	while (self) {
+		if (!self->in_use)
+			goto reset_iterator;
+		self = self->next;
+	}
+
+	self = calloc(1, sizeof(struct mcc_list_iter));
+	if (!self)
+		return NULL;
+
+	self->next = list->iters;
+	list->iters = self;
+	self->list = list;
+reset_iterator:
+	self->curr = list->head;
+	self->in_use = true;
+	return self;
 }
 
-bool mcc_list_iter_next(struct mcc_list_iter *self, void *result)
+void mcc_list_iter_drop(struct mcc_list_iter *self)
 {
-	if (!self || !result)
+	if (self)
+		self->in_use = false;
+}
+
+bool mcc_list_iter_next(struct mcc_list_iter *self, void **ref)
+{
+	if (!self || !ref || !self->curr)
 		return false;
 
-	if (!self->curr)
-		return false;
-
-	memcpy(result, value_of(self->curr), self->container->T->size);
+	*ref = value_of(self->curr);
 	self->curr = self->curr->next;
 	return true;
 }

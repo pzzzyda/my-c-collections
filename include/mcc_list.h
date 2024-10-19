@@ -1,23 +1,13 @@
 #ifndef _MCC_LIST_H
 #define _MCC_LIST_H
 
-#include "core/mcc_iterator.h"
-#include "core/mcc_object.h"
-
-struct mcc_list_node;
+#include "mcc_object.h"
 
 struct mcc_list;
 
-struct mcc_list_iter {
-	struct mcc_iter base;
-
-	struct mcc_list_node *curr;
-	struct mcc_list *container;
-};
-
 struct mcc_list *mcc_list_new(const struct mcc_object_interface *T);
 
-void mcc_list_delete(struct mcc_list *self);
+void mcc_list_drop(struct mcc_list *self);
 
 int mcc_list_push_front(struct mcc_list *self, const void *value);
 
@@ -33,13 +23,9 @@ void mcc_list_remove(struct mcc_list *self, size_t index);
 
 void mcc_list_clear(struct mcc_list *self);
 
-int mcc_list_front(struct mcc_list *self, void *value);
+int mcc_list_front(struct mcc_list *self, void **ref);
 
-void *mcc_list_front_ptr(struct mcc_list *self);
-
-int mcc_list_back(struct mcc_list *self, void *value);
-
-void *mcc_list_back_ptr(struct mcc_list *self);
+int mcc_list_back(struct mcc_list *self, void **ref);
 
 size_t mcc_list_len(struct mcc_list *self);
 
@@ -47,8 +33,12 @@ bool mcc_list_is_empty(struct mcc_list *self);
 
 int mcc_list_sort(struct mcc_list *self);
 
-int mcc_list_iter_init(struct mcc_list *self, struct mcc_list_iter *iter);
+struct mcc_list_iter;
 
-bool mcc_list_iter_next(struct mcc_list_iter *self, void *result);
+struct mcc_list_iter *mcc_list_iter_new(struct mcc_list *list);
+
+void mcc_list_iter_drop(struct mcc_list_iter *self);
+
+bool mcc_list_iter_next(struct mcc_list_iter *self, void **ref);
 
 #endif /* _MCC_LIST_H */
