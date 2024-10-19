@@ -1,21 +1,13 @@
 #ifndef _MCC_DEQUE_H
 #define _MCC_DEQUE_H
 
-#include "core/mcc_iterator.h"
-#include "core/mcc_object.h"
+#include "mcc_object.h"
 
 struct mcc_deque;
 
-struct mcc_deque_iter {
-	struct mcc_iter base;
-
-	size_t idx;
-	struct mcc_deque *container;
-};
-
 struct mcc_deque *mcc_deque_new(const struct mcc_object_interface *T);
 
-void mcc_deque_delete(struct mcc_deque *self);
+void mcc_deque_drop(struct mcc_deque *self);
 
 int mcc_deque_reserve(struct mcc_deque *self, size_t additional);
 
@@ -33,17 +25,11 @@ void mcc_deque_remove(struct mcc_deque *self, size_t index);
 
 void mcc_deque_clear(struct mcc_deque *self);
 
-int mcc_deque_get(struct mcc_deque *self, size_t index, void *value);
+int mcc_deque_get(struct mcc_deque *self, size_t index, void **ref);
 
-void *mcc_deque_get_ptr(struct mcc_deque *self, size_t index);
+int mcc_deque_front(struct mcc_deque *self, void **ref);
 
-int mcc_deque_front(struct mcc_deque *self, void *value);
-
-void *mcc_deque_front_ptr(struct mcc_deque *self);
-
-int mcc_deque_back(struct mcc_deque *self, void *value);
-
-void *mcc_deque_back_ptr(struct mcc_deque *self);
+int mcc_deque_back(struct mcc_deque *self, void **ref);
 
 size_t mcc_deque_capacity(struct mcc_deque *self);
 
@@ -59,8 +45,12 @@ int mcc_deque_sort(struct mcc_deque *self);
 
 void *mcc_deque_binary_search(struct mcc_deque *self, const void *key);
 
-int mcc_deque_iter_init(struct mcc_deque *self, struct mcc_deque_iter *iter);
+struct mcc_deque_iter;
 
-bool mcc_deque_iter_next(struct mcc_deque_iter *self, void *result);
+struct mcc_deque_iter *mcc_deque_iter_new(struct mcc_deque *deque);
+
+void mcc_deque_iter_drop(struct mcc_deque_iter *self);
+
+bool mcc_deque_iter_next(struct mcc_deque_iter *self, void **ref);
 
 #endif /* _MCC_DEQUE_H */
