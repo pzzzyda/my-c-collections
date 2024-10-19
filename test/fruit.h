@@ -20,6 +20,11 @@ static inline int fruit_cmp(const struct fruit *self, const struct fruit *other)
 	return strcmp(self->name, other->name);
 }
 
+static inline size_t fruit_hash(const struct fruit *self)
+{
+	return mcc_str()->hash(&self->name);
+}
+
 static inline struct fruit *fruit_new(struct fruit *self, const char *name)
 {
 	self->name = strdup(name);
@@ -32,5 +37,5 @@ struct mcc_object_interface fruit_ = {
 	.size = sizeof(struct fruit),
 	.drop = (mcc_drop_fn)&fruit_drop,
 	.cmp = (mcc_compare_fn)&fruit_cmp,
-	.hash = 0,
+	.hash = (mcc_hash_fn)&fruit_hash,
 };
