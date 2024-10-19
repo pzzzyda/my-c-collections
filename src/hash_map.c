@@ -1,6 +1,7 @@
 #include "mcc_err.h"
 #include "mcc_hash_map.h"
 #include <stdlib.h>
+#include <string.h>
 
 struct mcc_hash_map_entry {
 	struct mcc_hash_map_entry *next;
