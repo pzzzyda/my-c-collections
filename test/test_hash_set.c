@@ -1,42 +1,34 @@
+#include "fruit.h"
 #include "mcc_hash_set.h"
+#include <assert.h>
 #include <stdio.h>
+
+#define set_insert mcc_hash_set_insert
+#define set_remove mcc_hash_set_remove
+#define set_get mcc_hash_set_get
+#define set_clear mcc_hash_set_clear
 
 int main(void)
 {
-	struct mcc_hash_set_iter iter;
-	int elem;
-	struct mcc_hash_set *set = mcc_hash_set_new(INT);
-
-	mcc_hash_set_insert(set, &(int){34});
-	mcc_hash_set_insert(set, &(int){62});
-	mcc_hash_set_insert(set, &(int){19});
-	mcc_hash_set_insert(set, &(int){22});
-	mcc_hash_set_insert(set, &(int){30});
-	mcc_hash_set_insert(set, &(int){75});
-	mcc_hash_set_insert(set, &(int){93});
-	mcc_hash_set_insert(set, &(int){57});
-	mcc_hash_set_insert(set, &(int){25});
-
-	puts("Raw data");
-	mcc_hash_set_iter_init(set, &iter);
-	while (mcc_iter_next(&iter, &elem))
-		printf("%d ", elem);
-	putchar('\n');
-
-	puts("Removed 30");
-	mcc_hash_set_remove(set, &(int){30});
-	mcc_hash_set_iter_init(set, &iter);
-	while (mcc_iter_next(&iter, &elem))
-		printf("%d ", elem);
-	putchar('\n');
-
-	puts("Removed 93");
-	mcc_hash_set_remove(set, &(int){93});
-	mcc_hash_set_iter_init(set, &iter);
-	while (mcc_iter_next(&iter, &elem))
-		printf("%d ", elem);
-	putchar('\n');
-
-	mcc_hash_set_delete(set);
+	struct fruit tmp;
+	const struct fruit *ref;
+	struct mcc_hash_set *set = mcc_hash_set_new(&fruit_);
+	assert(set != NULL);
+	assert(!set_insert(set, fruit_new(&tmp, "Orange")));
+	assert(!set_insert(set, fruit_new(&tmp, "Watermelon")));
+	assert(!set_insert(set, fruit_new(&tmp, "Apple")));
+	assert(!set_insert(set, fruit_new(&tmp, "Pear")));
+	assert(!set_insert(set, fruit_new(&tmp, "Pineapple")));
+	assert(!set_insert(set, fruit_new(&tmp, "Banana")));
+	assert(!set_insert(set, fruit_new(&tmp, "Grape")));
+	assert(!set_insert(set, fruit_new(&tmp, "Strawberry")));
+	assert(!set_get(set, &(struct fruit){"Apple"}, (const void **)&ref));
+	assert(!fruit_cmp(ref, &(struct fruit){"Apple", 1, 0.5}));
+	assert(!set_get(set, &(struct fruit){"Grape"}, (const void **)&ref));
+	assert(!fruit_cmp(ref, &(struct fruit){"Grape", 1, 0.5}));
+	set_remove(set, &(struct fruit){"Pineapple"});
+	assert(set_get(set, &(struct fruit){"Pineapple"}, (const void **)&ref));
+	mcc_hash_set_drop(set);
+	puts("testing done");
 	return 0;
 }
