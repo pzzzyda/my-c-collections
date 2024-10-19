@@ -1,21 +1,13 @@
 #ifndef _MCC_VECTOR_H
 #define _MCC_VECTOR_H
 
-#include "core/mcc_iterator.h"
-#include "core/mcc_object.h"
+#include "mcc_object.h"
 
 struct mcc_vector;
 
-struct mcc_vector_iter {
-	struct mcc_iter base;
-
-	size_t idx;
-	struct mcc_vector *container;
-};
-
 struct mcc_vector *mcc_vector_new(const struct mcc_object_interface *T);
 
-void mcc_vector_delete(struct mcc_vector *self);
+void mcc_vector_drop(struct mcc_vector *self);
 
 int mcc_vector_reserve(struct mcc_vector *self, size_t additional);
 
@@ -31,17 +23,11 @@ void mcc_vector_remove(struct mcc_vector *self, size_t index);
 
 void mcc_vector_clear(struct mcc_vector *self);
 
-int mcc_vector_get(struct mcc_vector *self, size_t index, void *value);
+int mcc_vector_get(struct mcc_vector *self, size_t index, void **ref);
 
-void *mcc_vector_get_ptr(struct mcc_vector *self, size_t index);
+int mcc_vector_front(struct mcc_vector *self, void **ref);
 
-int mcc_vector_front(struct mcc_vector *self, void *value);
-
-void *mcc_vector_front_ptr(struct mcc_vector *self);
-
-int mcc_vector_back(struct mcc_vector *self, void *value);
-
-void *mcc_vector_back_ptr(struct mcc_vector *self);
+int mcc_vector_back(struct mcc_vector *self, void **ref);
 
 size_t mcc_vector_capacity(struct mcc_vector *self);
 
@@ -57,8 +43,12 @@ int mcc_vector_sort(struct mcc_vector *self);
 
 void *mcc_vector_binary_search(struct mcc_vector *self, const void *key);
 
-int mcc_vector_iter_init(struct mcc_vector *self, struct mcc_vector_iter *iter);
+struct mcc_vector_iter;
 
-bool mcc_vector_iter_next(struct mcc_vector_iter *self, void *result);
+struct mcc_vector_iter *mcc_vector_iter_new(struct mcc_vector *vector);
+
+void mcc_vector_iter_drop(struct mcc_vector_iter *self);
+
+bool mcc_vector_iter_next(struct mcc_vector_iter *self, void **ref);
 
 #endif /* _MCC_VECTOR_H */
