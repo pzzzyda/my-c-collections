@@ -10,6 +10,8 @@ my-c-collections is a simple generic container library implemented in C.
 | `mcc_set` | An ordered set based on red-black tree. |
 | `mcc_hash_set` | A hash set. |
 | `mcc_priority_queue` | A priority queue implemented using a binary heap. |
+| `mcc_stack` | A stack. |
+| `mcc_queue` | A queue. |
 ### Install
 ```bash
 sudo make install
