@@ -11,6 +11,10 @@ void mcc_vector_drop(struct mcc_vector *self);
 
 int mcc_vector_reserve(struct mcc_vector *self, size_t additional);
 
+int mcc_vector_grow_to(struct mcc_vector *self, size_t capacity);
+
+int mcc_vector_shrink_to(struct mcc_vector *self, size_t capacity);
+
 int mcc_vector_shrink_to_fit(struct mcc_vector *self);
 
 int mcc_vector_push(struct mcc_vector *self, const void *value);
@@ -22,6 +26,8 @@ int mcc_vector_insert(struct mcc_vector *self, size_t index, const void *value);
 void mcc_vector_remove(struct mcc_vector *self, size_t index);
 
 void mcc_vector_clear(struct mcc_vector *self);
+
+int mcc_vector_set(struct mcc_vector *self, size_t index, const void *value);
 
 int mcc_vector_get(struct mcc_vector *self, size_t index, void **ref);
 

@@ -30,6 +30,30 @@ static inline void move(struct mcc_vector *self, size_t to, size_t from,
 	memcpy(get(self, to), get(self, from), n * self->T->size);
 }
 
+static int reallocate_buffer(struct mcc_vector *self, size_t capacity)
+{
+	uint8_t *new_ptr;
+
+	if (!capacity) {
+		if (self->capacity) {
+			free(self->ptr);
+			self->ptr = NULL;
+			self->capacity = 0;
+		}
+		return OK;
+	}
+
+	new_ptr = realloc(self->ptr, capacity * self->T->size);
+
+	if (new_ptr) {
+		self->ptr = new_ptr;
+		self->capacity = capacity;
+		return OK;
+	} else {
+		return CANNOT_ALLOCATE_MEMORY;
+	}
+}
+
 struct mcc_vector *mcc_vector_new(const struct mcc_object_interface *T)
 {
 	struct mcc_vector *self;
@@ -64,7 +88,6 @@ void mcc_vector_drop(struct mcc_vector *self)
 
 int mcc_vector_reserve(struct mcc_vector *self, size_t additional)
 {
-	uint8_t *new_ptr;
 	size_t min_capacity, new_capacity;
 
 	if (!self)
@@ -78,36 +101,40 @@ int mcc_vector_reserve(struct mcc_vector *self, size_t additional)
 	while (new_capacity < min_capacity)
 		new_capacity <<= 1;
 
-	new_ptr = realloc(self->ptr, new_capacity * self->T->size);
-	if (!new_ptr)
-		return CANNOT_ALLOCATE_MEMORY;
+	return reallocate_buffer(self, new_capacity);
+}
 
-	self->ptr = new_ptr;
-	self->capacity = new_capacity;
-	return OK;
+int mcc_vector_grow_to(struct mcc_vector *self, size_t capacity)
+{
+	if (!self)
+		return INVALID_ARGUMENTS;
+
+	if (capacity > self->capacity)
+		return reallocate_buffer(self, capacity);
+	else
+		return OK;
+}
+
+int mcc_vector_shrink_to(struct mcc_vector *self, size_t capacity)
+{
+	if (!self)
+		return INVALID_ARGUMENTS;
+
+	if (capacity < self->capacity)
+		return reallocate_buffer(self, capacity);
+	else
+		return OK;
 }
 
 int mcc_vector_shrink_to_fit(struct mcc_vector *self)
 {
-	uint8_t *new_ptr;
-
 	if (!self)
 		return INVALID_ARGUMENTS;
 
-	if (!self->len) {
-		free(self->ptr);
-		self->ptr = NULL;
-		self->capacity = 0;
+	if (self->capacity > self->len)
+		return mcc_vector_shrink_to(self, self->len);
+	else
 		return OK;
-	}
-
-	new_ptr = realloc(self->ptr, self->len * self->T->size);
-	if (!new_ptr)
-		return CANNOT_ALLOCATE_MEMORY;
-
-	self->ptr = new_ptr;
-	self->capacity = self->len;
-	return OK;
 }
 
 int mcc_vector_push(struct mcc_vector *self, const void *value)
@@ -184,6 +211,20 @@ void mcc_vector_clear(struct mcc_vector *self)
 	} else {
 		self->len = 0;
 	}
+}
+
+int mcc_vector_set(struct mcc_vector *self, size_t index, const void *value)
+{
+	if (!self || !value)
+		return INVALID_ARGUMENTS;
+
+	if (index >= self->len)
+		return OUT_OF_RANGE;
+
+	if (self->T->drop)
+		self->T->drop(get(self, index));
+	memcpy(get(self, index), value, self->T->size);
+	return OK;
 }
 
 int mcc_vector_get(struct mcc_vector *self, size_t index, void **ref)
