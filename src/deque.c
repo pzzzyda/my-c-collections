@@ -303,6 +303,20 @@ void mcc_deque_clear(struct mcc_deque *self)
 	}
 }
 
+int mcc_deque_set(struct mcc_deque *self, size_t index, const void *value)
+{
+	if (!self || !value)
+		return INVALID_ARGUMENTS;
+
+	if (index >= self->len)
+		return NONE;
+
+	if (self->T->drop)
+		self->T->drop(get(self, index));
+	memcpy(get(self, index), value, self->T->size);
+	return OK;
+}
+
 int mcc_deque_get(struct mcc_deque *self, size_t index, void **ref)
 {
 	if (!self || !ref)

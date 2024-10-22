@@ -25,6 +25,8 @@ void mcc_deque_remove(struct mcc_deque *self, size_t index);
 
 void mcc_deque_clear(struct mcc_deque *self);
 
+int mcc_deque_set(struct mcc_deque *self, size_t index, const void *value);
+
 int mcc_deque_get(struct mcc_deque *self, size_t index, void **ref);
 
 int mcc_deque_front(struct mcc_deque *self, void **ref);
